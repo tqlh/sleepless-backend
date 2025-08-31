@@ -13,6 +13,22 @@ app.use(bodyParser.json());
 const dbPath = path.join(__dirname, 'sleepless.db');
 const db = new sqlite3.Database(dbPath);
 
+// Force create daily_counts table on startup
+db.run(`
+  CREATE TABLE IF NOT EXISTS daily_counts (
+    fingerprint TEXT,
+    date TEXT,
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (fingerprint, date)
+  )
+`, (err) => {
+  if (err) {
+    console.error('Error creating daily_counts table:', err);
+  } else {
+    console.log('✅ daily_counts table created/verified');
+  }
+});
+
 // Get all posts
 app.get('/api/posts', (req, res) => {
   db.all(`
