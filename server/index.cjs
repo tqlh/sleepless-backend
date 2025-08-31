@@ -56,6 +56,18 @@ app.post('/api/posts', (req, res) => {
         return res.status(500).json({ error: err.message });
       }
       
+      // Increment daily count for this user
+      const today = new Date().toDateString();
+      db.run(
+        "INSERT OR REPLACE INTO daily_counts (fingerprint, date, count) VALUES (?, ?, COALESCE((SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?), 0) + 1)",
+        [userFingerprint, today, userFingerprint, today],
+        function(countErr) {
+          if (countErr) {
+            console.error('Failed to update daily count:', countErr);
+          }
+        }
+      );
+      
       res.json({
         id: postId,
         content,
@@ -85,13 +97,31 @@ app.patch('/api/posts/:id/bookmark', (req, res) => {
   );
 });
 
-// Get daily post count (simplified)
+// Get daily post count
 app.get('/api/daily-count/:fingerprint', (req, res) => {
-  res.json({
-    count: 0,
-    limit: 5,
-    remaining: 5
-  });
+  const { fingerprint } = req.params;
+  const today = new Date().toDateString();
+  
+  // Get daily count for this fingerprint
+  db.get(
+    "SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?",
+    [fingerprint, today],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      
+      const count = row ? row.count : 0;
+      const limit = 5;
+      const remaining = Math.max(0, limit - count);
+      
+      res.json({
+        count,
+        limit,
+        remaining
+      });
+    }
+  );
 });
 
 // Health check
