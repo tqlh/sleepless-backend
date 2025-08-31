@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { generateSamplePosts } from './utils/sampleData';
+import { apiService } from './utils/apiService'; // ← ADD THIS IMPORT
 import PostForm from './components/PostForm';
 import PostViewer from './components/PostViewer';
 import BookmarkManager from './components/BookmarkManager';
@@ -8,74 +8,57 @@ import { getStoredPosts, storePost, getDailyPostCount, incrementDailyPostCount, 
 import { Bookmark } from 'lucide-react';
 import AnimatedLogo from './components/AnimatedLogo';
 
-const loadTestThoughts = (setPosts: React.Dispatch<React.SetStateAction<PostData[]>>, setDailyPostCount: React.Dispatch<React.SetStateAction<number>>) => {
-  const testThoughts = [
-    "tired but wired",
-    "monday again", 
-    "why though",
-    "big mood",
-    "narrator voice: it wasn't fine",
-    "touch grass",
-    "same energy",
-    "今日も疲れた",
-    "なんで眠れないんだろう",
-    "雨の音が心地いい",
-    "一人の時間が好き",
-    "made tea and forgot about it. found it cold on the counter 3 hours later",
-    "that brief panic when you can't find your phone while holding your phone",
-    "why do i always remember embarrassing things from 2019 at 2am",
-    "spent 20 minutes choosing a netflix show just to scroll on my phone instead",
-    "accidentally said 'you too' when the cashier said 'happy birthday' to someone behind me",
-    "grocery shopping while hungry was a financial mistake",
-    "the commitment it takes to finish a chapstick without losing it",
-    "having 47 tabs open and somehow still opening more",
-    "main character energy but side character budget",
-    "my therapist is gonna hear about this",
-    "why am i like this (rhetorical)",
-    "living my best life (citation needed)",
-    "sounds fake but okay",
-    "everything is content now apparently",
-    "we're all just coping mechanisms wearing human suits",
-    "what if colors look different to everyone but we all learned the same names",
-    "sometimes i think my cat understands me better than most people",
-    "wondering if parallel universe me is living my best life"
-  ];
-  
-  const shuffled = testThoughts.sort(() => 0.5 - Math.random());
-  
-  const testPosts: PostData[] = shuffled.map((content, index) => ({
-    id: (Date.now() + index).toString(),
-    content,
-    language: content.includes('今日') || content.includes('なんで') || content.includes('一人') || 
-              content.includes('雨の') || content.includes('深夜') ? 'ja' : 'en',
-    timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
-    isBookmarked: Math.random() < 0.15
-  }));
-  
-  localStorage.setItem('sleepless_posts', JSON.stringify(testPosts));
-  setPosts(testPosts);
-  setDailyPostCount(Math.floor(Math.random() * 4));
-};
+// Keep your loadTestThoughts function as backup...
 
 function App() {
   const [posts, setPosts] = useState<PostData[]>([]);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [isBookmarkTransitioning, setIsBookmarkTransitioning] = useState(false);
   const [dailyPostCount, setDailyPostCount] = useState(0);
+  const [remainingPosts, setRemainingPosts] = useState(3);
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [lastViewedPostId, setLastViewedPostId] = useState<string | null>(null);
   const [footerMessage, setFooterMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // ← REPLACE THE OLD useEffect WITH THIS:
   useEffect(() => {
-    const storedPosts = getStoredPosts();
-    setPosts(storedPosts);
-    
-    setDailyPostCount(getDailyPostCount());
-    
-    // Load test thoughts if no posts exist
-    if (storedPosts.length === 0) {
-      loadTestThoughts(setPosts, setDailyPostCount);
-    }
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [postsData, dailyData] = await Promise.all([
+          apiService.getPosts(),
+          apiService.getDailyCount()
+        ]);
+        setPosts(postsData);
+        setDailyPostCount(dailyData.count);
+        setRemainingPosts(dailyData.remaining);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        setError('Failed to connect to server. Using local data.');
+        // Fallback to localStorage if API fails
+        try {
+          const stored = localStorage.getItem('sleepless_posts');
+          if (stored) {
+            const parsedPosts = JSON.parse(stored).map((post: any) => ({
+              ...post,
+              timestamp: new Date(post.timestamp)
+            }));
+            setPosts(parsedPosts);
+          }
+          setDailyPostCount(getDailyPostCount());
+          setRemainingPosts(getRemainingPostsToday());
+        } catch (localError) {
+          console.error('Failed to load from localStorage:', localError);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // Update footer message based on post count
@@ -94,32 +77,57 @@ function App() {
     setFooterMessage(randomMessage);
   }, [posts.length]);
 
-  const handleNewPost = useCallback((content: string, language: string = 'en') => {
-    if (!canPostToday()) {
-      alert('You have reached your daily posting limit. Please try again tomorrow.');
-      return;
+  const handleNewPost = useCallback(async (content: string, language: string = 'en') => {
+    try {
+      const newPost = await apiService.createPost(content, language);
+      setPosts(prev => [newPost, ...prev]);
+      
+      // Update daily count
+      const dailyData = await apiService.getDailyCount();
+      setDailyPostCount(dailyData.count);
+      setRemainingPosts(dailyData.remaining);
+    } catch (err) {
+      console.error('Failed to create post:', err);
+      // Fallback to local storage
+      if (!canPostToday()) {
+        alert('You have reached your daily posting limit. Please try again tomorrow.');
+        return;
+      }
+
+      const newPost: PostData = {
+        id: Date.now().toString(),
+        content,
+        language,
+        timestamp: new Date(),
+        isBookmarked: false
+      };
+
+      const updatedPosts = storePost(newPost, posts);
+      setPosts(updatedPosts);
+      incrementDailyPostCount();
+      setDailyPostCount(getDailyPostCount());
     }
-
-    const newPost: PostData = {
-      id: Date.now().toString(),
-      content,
-      language,
-      timestamp: new Date(),
-      isBookmarked: false
-    };
-
-    const updatedPosts = storePost(newPost, posts);
-    setPosts(updatedPosts);
-    incrementDailyPostCount();
-    setDailyPostCount(getDailyPostCount());
   }, [posts]);
 
-  const handleBookmarkToggle = useCallback((postId: string) => {
-    const updatedPosts = posts.map(post => 
-      post.id === postId ? { ...post, isBookmarked: !post.isBookmarked } : post
-    );
-    setPosts(updatedPosts);
-    localStorage.setItem('sleepless_posts', JSON.stringify(updatedPosts));
+  const handleBookmarkToggle = useCallback(async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      await apiService.toggleBookmark(postId, !post.isBookmarked);
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, isBookmarked: !p.isBookmarked } : p
+      );
+      setPosts(updatedPosts);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+      // Fallback to local update
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, isBookmarked: !p.isBookmarked } : p
+      );
+      setPosts(updatedPosts);
+      localStorage.setItem('sleepless_posts', JSON.stringify(updatedPosts));
+    }
   }, [posts]);
 
   const handleCurrentPostChange = useCallback((postId: string) => {
@@ -143,8 +151,26 @@ function App() {
 
   const bookmarkedCount = posts.filter(post => post.isBookmarked).length;
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif flex items-center justify-center">
+        <div className="text-center">
+          <AnimatedLogo />
+          <p className="text-neutral-400 mt-4">Loading thoughts...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif">
+      {error && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-900/80 text-yellow-200 px-4 py-2 rounded-lg z-50">
+          {error}
+        </div>
+      )}
+      
+      {/* ... rest of your JSX stays the same ... */}
       {/* Blur overlay - only appears when form is expanded */}
       {isFormExpanded && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 pointer-events-none" />
@@ -223,8 +249,8 @@ function App() {
       <div className="fixed top-48 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
         <PostForm 
           onSubmit={handleNewPost}
-          canPost={canPostToday()}
-          remainingPosts={getRemainingPostsToday()}
+          canPost={remainingPosts > 0}
+          remainingPosts={remainingPosts}
           onExpandChange={setIsFormExpanded}
         />
       </div>
