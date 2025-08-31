@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { apiService } from './utils/apiService'; // ← ADD THIS IMPORT
+import { apiService } from './utils/apiService';
 import PostForm from './components/PostForm';
 import PostViewer from './components/PostViewer';
 import BookmarkManager from './components/BookmarkManager';
@@ -7,8 +7,6 @@ import { PostData } from './types/Post';
 import { getStoredPosts, storePost, getDailyPostCount, incrementDailyPostCount, canPostToday, getRemainingPostsToday } from './utils/postManager';
 import { Bookmark } from 'lucide-react';
 import AnimatedLogo from './components/AnimatedLogo';
-
-// Keep your loadTestThoughts function as backup...
 
 function App() {
   const [posts, setPosts] = useState<PostData[]>([]);
@@ -22,7 +20,6 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ← REPLACE THE OLD useEffect WITH THIS:
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -32,7 +29,14 @@ function App() {
           apiService.getPosts(),
           apiService.getDailyCount()
         ]);
-        setPosts(postsData);
+        
+        // Convert timestamp strings to Date objects
+        const postsWithDates = postsData.map(post => ({
+          ...post,
+          timestamp: new Date(post.timestamp)
+        }));
+        
+        setPosts(postsWithDates);
         setDailyPostCount(dailyData.count);
         setRemainingPosts(dailyData.remaining);
       } catch (err) {
@@ -80,7 +84,14 @@ function App() {
   const handleNewPost = useCallback(async (content: string, language: string = 'en') => {
     try {
       const newPost = await apiService.createPost(content, language);
-      setPosts(prev => [newPost, ...prev]);
+      
+      // Convert timestamp to Date object
+      const postWithDate = {
+        ...newPost,
+        timestamp: new Date(newPost.timestamp)
+      };
+      
+      setPosts(prev => [postWithDate, ...prev]);
       
       // Update daily count
       const dailyData = await apiService.getDailyCount();
@@ -170,7 +181,6 @@ function App() {
         </div>
       )}
       
-      {/* ... rest of your JSX stays the same ... */}
       {/* Blur overlay - only appears when form is expanded */}
       {isFormExpanded && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 pointer-events-none" />
@@ -223,6 +233,8 @@ function App() {
                 showBookmarksOnly={showBookmarksOnly}
                 lastViewedPostId={lastViewedPostId}
                 onCurrentPostChange={handleCurrentPostChange}
+                isAdmin={false}
+                onDeletePost={undefined}
               />
             )
           )}
