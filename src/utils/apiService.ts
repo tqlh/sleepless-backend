@@ -26,7 +26,7 @@ const getUserFingerprint = (): string => {
 
 class ApiService {
   private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const url = `${API_BASE_URL}/api${endpoint}`;
+    const url = `${API_BASE_URL}/api${endpoint}?t=${Date.now()}`;
     
     const config: RequestInit = {
       headers: {
