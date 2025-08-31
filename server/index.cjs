@@ -61,36 +61,60 @@ app.post('/api/posts', (req, res) => {
     return res.status(400).json({ error: 'Content is required' });
   }
   
-  const postId = Date.now().toString();
-  const timestamp = new Date().toISOString();
+  // Check daily limit FIRST
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   
-  db.run(
-    "INSERT INTO posts (id, content, language, timestamp) VALUES (?, ?, ?, ?)",
-    [postId, content, language, timestamp],
-    function(err) {
+  db.get(
+    "SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?",
+    [userFingerprint, today],
+    (err, row) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
       
-      // Increment daily count for this user
-      const today = new Date().toDateString();
+      const currentCount = row ? row.count : 0;
+      
+      // Check if user has reached daily limit
+      if (currentCount >= 5) {
+        return res.status(429).json({ 
+          error: 'Daily posting limit reached (5 posts per day)',
+          count: currentCount,
+          limit: 5
+        });
+      }
+      
+      // Create post
+      const postId = Date.now().toString();
+      const timestamp = new Date().toISOString();
+      
       db.run(
-        "INSERT OR REPLACE INTO daily_counts (fingerprint, date, count) VALUES (?, ?, COALESCE((SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?), 0) + 1)",
-        [userFingerprint, today, userFingerprint, today],
-        function(countErr) {
-          if (countErr) {
-            console.error('Failed to update daily count:', countErr);
+        "INSERT INTO posts (id, content, language, timestamp) VALUES (?, ?, ?, ?)",
+        [postId, content, language, timestamp],
+        function(err) {
+          if (err) {
+            return res.status(500).json({ error: err.message });
           }
+          
+          // Increment daily count for this user
+          db.run(
+            "INSERT OR REPLACE INTO daily_counts (fingerprint, date, count) VALUES (?, ?, ?)",
+            [userFingerprint, today, currentCount + 1],
+            function(countErr) {
+              if (countErr) {
+                console.error('Failed to update daily count:', countErr);
+              }
+            }
+          );
+          
+          res.json({
+            id: postId,
+            content,
+            language,
+            timestamp: new Date(timestamp),
+            isBookmarked: false
+          });
         }
       );
-      
-      res.json({
-        id: postId,
-        content,
-        language,
-        timestamp: new Date(timestamp),
-        isBookmarked: false
-      });
     }
   );
 });
@@ -116,7 +140,7 @@ app.patch('/api/posts/:id/bookmark', (req, res) => {
 // Get daily post count
 app.get('/api/daily-count/:fingerprint', (req, res) => {
   const { fingerprint } = req.params;
-  const today = new Date().toDateString();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   
   // Get daily count for this fingerprint
   db.get(
