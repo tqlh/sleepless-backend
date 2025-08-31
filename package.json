@@ -1,0 +1,35 @@
+{
+  "name": "sleepless-ink",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Anonymous thought sharing platform",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.cjs",
+    "client": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "setup-db": "node server/setupDatabase.cjs",
+    "start": "npm run setup-db && npm run server"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.27",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.5"
+  }
+}
