@@ -75,6 +75,13 @@ class ApiService {
     });
   }
 
+  // ADD THIS MISSING METHOD
+  async deletePost(postId: string): Promise<void> {
+    await this.request(`/posts/${postId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getDailyCount(): Promise<{ count: number; limit: number; remaining: number }> {
     const userFingerprint = getUserFingerprint();
     return await this.request(`/daily-count/${userFingerprint}`);
