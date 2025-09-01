@@ -57,6 +57,7 @@ class ApiService {
 
   async createPost(content: string, language: string = 'en'): Promise<PostData> {
     const userFingerprint = getUserFingerprint();
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; // Get user's timezone
     
     return await this.request('/posts', {
       method: 'POST',
@@ -64,6 +65,7 @@ class ApiService {
         content,
         language,
         userFingerprint,
+        userTimezone, // Add this
       }),
     });
   }
@@ -84,7 +86,8 @@ class ApiService {
 
   async getDailyCount(): Promise<{ count: number; limit: number; remaining: number }> {
     const userFingerprint = getUserFingerprint();
-    return await this.request(`/daily-count/${userFingerprint}`);
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return await this.request(`/daily-count/${userFingerprint}?timezone=${encodeURIComponent(userTimezone)}`);
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
