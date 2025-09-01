@@ -166,7 +166,7 @@ function App() {
     return (
       <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif flex items-center justify-center">
         <div className="text-center">
-          <AnimatedLogo />
+          <AnimatedLogo isLoading={true} />
           <p className="text-neutral-400 mt-4">Loading thoughts...</p>
         </div>
       </div>
