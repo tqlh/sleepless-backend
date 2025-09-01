@@ -235,8 +235,6 @@ function App() {
                 showBookmarksOnly={showBookmarksOnly}
                 lastViewedPostId={lastViewedPostId}
                 onCurrentPostChange={handleCurrentPostChange}
-                isAdmin={false}
-                onDeletePost={undefined}
               />
             )
           )}
