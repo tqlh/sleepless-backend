@@ -23,17 +23,234 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [passwordBuffer, setPasswordBuffer] = useState('');
   const [lastKeyTime, setLastKeyTime] = useState(0);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
-  // ... existing useEffect hooks ...
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const [postsData, dailyData] = await Promise.all([
+          apiService.getPosts(),
+          apiService.getDailyCount()
+        ]);
+        
+        // Convert timestamp strings to Date objects
+        const postsWithDates = postsData.map(post => ({
+          ...post,
+          timestamp: new Date(post.timestamp)
+        }));
+        
+        setPosts(postsWithDates);
+        setDailyPostCount(dailyData.count);
+        setRemainingPosts(dailyData.remaining);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+        setError('Failed to connect to server. Using local data.');
+        // Fallback to localStorage if API fails
+        try {
+          const stored = localStorage.getItem('sleepless_posts');
+          if (stored) {
+            const parsedPosts = JSON.parse(stored).map((post: any) => ({
+              ...post,
+              timestamp: new Date(post.timestamp)
+            }));
+            setPosts(parsedPosts);
+          }
+          setDailyPostCount(getDailyPostCount());
+          setRemainingPosts(getRemainingPostsToday());
+        } catch (localError) {
+          console.error('Failed to load from localStorage:', localError);
+        }
+      } finally {
+        setIsLoading(false);
+        // Delay showing background elements to prevent flash
+        setTimeout(() => setShowBackground(true), 100);
+      }
+    };
 
-  // ... existing handlers ...
-
-  const handleToggleAdminPanel = useCallback(() => {
-    setShowAdminPanel(prev => !prev);
+    loadData();
   }, []);
 
-  // ... rest of existing code until the return statement ...
+  // Update footer message based on post count
+  useEffect(() => {
+    const messages = [
+      "whispers drift through the digital night",
+      "thoughts echo in the quiet hours", 
+      "midnight musings find their home",
+      "sleepless minds gather here",
+      "the night shift of consciousness",
+      "where insomnia meets expression",
+      "anonymous thoughts in the darkness"
+    ];
+    
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    setFooterMessage(randomMessage);
+  }, [posts.length]);
+
+  // Secret password detection
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      const now = Date.now();
+      
+      // Reset buffer if too much time has passed between keystrokes (3 seconds)
+      if (now - lastKeyTime > 3000) {
+        setPasswordBuffer('');
+      }
+      
+      setLastKeyTime(now);
+      
+      // Add character to buffer
+      const newBuffer = passwordBuffer + e.key;
+      setPasswordBuffer(newBuffer);
+      
+      // Check for secret password
+      const secretPassword = 'admin123';
+      
+      if (newBuffer.includes(secretPassword)) {
+        setIsAdmin(true);
+        setPasswordBuffer('');
+        setError('Admin mode activated');
+        setTimeout(() => setError(null), 2000);
+      }
+      
+      // Limit buffer length to prevent memory issues
+      if (newBuffer.length > 20) {
+        setPasswordBuffer(newBuffer.slice(-10));
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [passwordBuffer, lastKeyTime]);
+
+  const handleNewPost = useCallback(async (content: string, language: string = 'en') => {
+    // Check minimum word count (3 words)
+    const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    if (wordCount < 3) {
+      const cuteMessages = [
+        "please tell me more, don't be shy...",
+        "share a bit more of your thoughts with us",
+        "we'd love to hear more from you",
+        "just a few more words to make it special",
+        "your thoughts deserve more space to breathe"
+      ];
+      const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
+      setError(randomMessage);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
+    try {
+      const newPost = await apiService.createPost(content, language);
+      
+      // Convert timestamp to Date object
+      const postWithDate = {
+        ...newPost,
+        timestamp: new Date(newPost.timestamp)
+      };
+      
+      setPosts(prev => [postWithDate, ...prev]);
+      
+      // Update daily count
+      const dailyData = await apiService.getDailyCount();
+      setDailyPostCount(dailyData.count);
+      setRemainingPosts(dailyData.remaining);
+    } catch (err) {
+      console.error('Failed to create post:', err);
+      // Fallback to local storage
+      if (!canPostToday()) {
+        alert('You have reached your daily posting limit. Please try again tomorrow.');
+        return;
+      }
+
+      const newPost: PostData = {
+        id: Date.now().toString(),
+        content,
+        language,
+        timestamp: new Date(),
+        isBookmarked: false
+      };
+
+      const updatedPosts = storePost(newPost, posts);
+      setPosts(updatedPosts);
+      incrementDailyPostCount();
+      setDailyPostCount(getDailyPostCount());
+    }
+  }, [posts]);
+
+  const handleBookmarkToggle = useCallback(async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      await apiService.toggleBookmark(postId, !post.isBookmarked);
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, isBookmarked: !p.isBookmarked } : p
+      );
+      setPosts(updatedPosts);
+    } catch (err) {
+      console.error('Failed to toggle bookmark:', err);
+      // Fallback to local update
+      const updatedPosts = posts.map(p => 
+        p.id === postId ? { ...p, isBookmarked: !p.isBookmarked } : p
+      );
+      setPosts(updatedPosts);
+      localStorage.setItem('sleepless_posts', JSON.stringify(updatedPosts));
+    }
+  }, [posts]);
+
+  const handleDeletePost = useCallback(async (postId: string) => {
+    if (!isAdmin) return;
+
+    try {
+      await apiService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setError('Post deleted successfully');
+      setTimeout(() => setError(null), 2000);
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      setError('Failed to delete post');
+      setTimeout(() => setError(null), 2000);
+    }
+  }, [isAdmin]);
+
+  const handleCurrentPostChange = useCallback((postId: string) => {
+    if (!showBookmarksOnly) {
+      setLastViewedPostId(postId);
+    }
+  }, [showBookmarksOnly]);
+
+  const handleShowBookmarksToggle = useCallback(() => {
+    setIsBookmarkTransitioning(true);
+    setTimeout(() => {
+      setShowBookmarksOnly(!showBookmarksOnly);
+      setIsBookmarkTransitioning(false);
+    }, 300);
+  }, [showBookmarksOnly]);
+
+  const displayPosts = useMemo(() => 
+    showBookmarksOnly ? posts.filter(post => post.isBookmarked) : posts,
+    [posts, showBookmarksOnly]
+  );
+
+  const bookmarkedCount = posts.filter(post => post.isBookmarked).length;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif flex items-center justify-center">
+        <div className="text-center">
+          <AnimatedLogo isLoading={true} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif">
@@ -43,50 +260,11 @@ function App() {
         </div>
       )}
       
-      {/* Admin panel */}
-      {isAdmin && showAdminPanel && (
-        <div className="fixed top-16 right-4 bg-neutral-800/95 backdrop-blur-xl border border-neutral-600 rounded-lg p-4 max-w-md max-h-96 overflow-y-auto z-50">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-amber-200 font-medium">Admin Panel</h3>
-            <button 
-              onClick={handleToggleAdminPanel}
-              className="text-neutral-400 hover:text-white text-sm"
-            >
-              ✕
-            </button>
-          </div>
-          <div className="space-y-2">
-            <p className="text-neutral-400 text-xs mb-2">All Posts ({posts.length})</p>
-            {posts.map((post, index) => (
-              <div key={post.id} className="bg-neutral-700/50 rounded p-2 text-xs">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-neutral-200 truncate">{post.content}</p>
-                    <p className="text-neutral-500 text-xs mt-1">
-                      {new Date(post.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDeletePost(post.id)}
-                    className="ml-2 text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded bg-red-900/30 hover:bg-red-900/50"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Admin indicator - now clickable */}
+      {/* Admin indicator */}
       {isAdmin && (
-        <button
-          onClick={handleToggleAdminPanel}
-          className="fixed top-4 right-4 bg-red-900/80 text-red-200 px-3 py-1 rounded-lg z-50 text-sm hover:bg-red-900/90 transition-colors"
-        >
-          {showAdminPanel ? 'HIDE ADMIN' : 'ADMIN MODE'}
-        </button>
+        <div className="fixed top-4 right-4 bg-red-900/80 text-red-200 px-3 py-1 rounded-lg z-50 text-sm">
+          ADMIN MODE
+        </div>
       )}
       
       {/* Blur overlay - only appears when form is expanded */}
