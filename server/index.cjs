@@ -60,14 +60,14 @@ app.get('/api/posts', (req, res) => {
 
 // Create new post
 app.post('/api/posts', (req, res) => {
-  const { content, language = 'en', userFingerprint } = req.body;
+  const { content, language = 'en', userFingerprint, userTimezone } = req.body;
   
   if (!content) {
     return res.status(400).json({ error: 'Content is required' });
   }
   
-  // Check daily limit FIRST
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  // Check daily limit FIRST - use user's timezone
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
   
   db.get(
     "SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?",
@@ -166,7 +166,10 @@ app.delete('/api/posts/:id', (req, res) => {
 // Get daily post count
 app.get('/api/daily-count/:fingerprint', (req, res) => {
   const { fingerprint } = req.params;
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const { timezone } = req.query;
+  
+  // Use user's timezone
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone || 'UTC' });
   
   // Get daily count for this fingerprint
   db.get(
