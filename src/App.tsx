@@ -20,6 +20,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showBackground, setShowBackground] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [passwordBuffer, setPasswordBuffer] = useState('');
+  const [lastKeyTime, setLastKeyTime] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -84,6 +87,48 @@ function App() {
     setFooterMessage(randomMessage);
   }, [posts.length]);
 
+  // Secret password detection
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      const now = Date.now();
+      
+      // Reset buffer if too much time has passed between keystrokes (3 seconds)
+      if (now - lastKeyTime > 3000) {
+        setPasswordBuffer('');
+      }
+      
+      setLastKeyTime(now);
+      
+      // Add character to buffer
+      const newBuffer = passwordBuffer + e.key;
+      setPasswordBuffer(newBuffer);
+      
+      // Check for secret password (you can change this to whatever you want)
+      const secretPassword = 'admin123'; // Change this to your desired password
+      
+      if (newBuffer.includes(secretPassword)) {
+        setIsAdmin(true);
+        setPasswordBuffer('');
+        setError('Admin mode activated');
+        setTimeout(() => setError(null), 2000);
+      }
+      
+      // Limit buffer length to prevent memory issues
+      if (newBuffer.length > 20) {
+        setPasswordBuffer(newBuffer.slice(-10));
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [passwordBuffer, lastKeyTime]);
+
   const handleNewPost = useCallback(async (content: string, language: string = 'en') => {
     try {
       const newPost = await apiService.createPost(content, language);
@@ -144,6 +189,21 @@ function App() {
     }
   }, [posts]);
 
+  const handleDeletePost = useCallback(async (postId: string) => {
+    if (!isAdmin) return;
+
+    try {
+      await apiService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setError('Post deleted successfully');
+      setTimeout(() => setError(null), 2000);
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      setError('Failed to delete post');
+      setTimeout(() => setError(null), 2000);
+    }
+  }, [isAdmin]);
+
   const handleCurrentPostChange = useCallback((postId: string) => {
     if (!showBookmarksOnly) {
       setLastViewedPostId(postId);
@@ -183,14 +243,21 @@ function App() {
         </div>
       )}
       
+      {/* Admin indicator */}
+      {isAdmin && (
+        <div className="fixed top-4 right-4 bg-red-900/80 text-red-200 px-3 py-1 rounded-lg z-50 text-sm">
+          ADMIN MODE
+        </div>
+      )}
+      
       {/* Blur overlay - only appears when form is expanded */}
       {isFormExpanded && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 pointer-events-none" />
       )}
       
-      {/* Header - enhanced blur effect */}
+      {/* Header - reduced height */}
       <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-2xl border-b border-neutral-700/20 transition-all duration-300 ${isFormExpanded ? 'blur-sm bg-neutral-900/95' : 'bg-neutral-900/80'}`}>
-        <div className="container mx-auto px-6 py-0.5 md:py-1.5">
+        <div className="container mx-auto px-6 py-1 md:py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <AnimatedLogo />
@@ -218,8 +285,8 @@ function App() {
         </div>
       </div>
       
-      {/* Main content - gets blurred when form is expanded */}
-      <div className={`container mx-auto px-6 pb-24 max-w-2xl relative z-10 transition-all duration-300 ${isFormExpanded ? 'blur-sm pt-96' : 'pt-80'}`}>
+      {/* Main content - adjusted top padding */}
+      <div className={`container mx-auto px-6 pb-24 max-w-2xl relative z-10 transition-all duration-300 ${isFormExpanded ? 'blur-sm pt-80' : 'pt-64'}`}>
         {/* Posts */}
         <div className={`mb-16 transition-opacity duration-300 ${isBookmarkTransitioning ? 'opacity-0' : 'opacity-100'}`}>
           {!isBookmarkTransitioning && (
@@ -235,8 +302,8 @@ function App() {
                 showBookmarksOnly={showBookmarksOnly}
                 lastViewedPostId={lastViewedPostId}
                 onCurrentPostChange={handleCurrentPostChange}
-                isAdmin={false}
-                onDeletePost={undefined}
+                isAdmin={isAdmin}
+                onDeletePost={handleDeletePost}
               />
             )
           )}
@@ -259,8 +326,8 @@ function App() {
         </div>
       </footer>
       
-      {/* Post Form - stays sharp and above everything */}
-      <div className="fixed top-48 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
+      {/* Post Form - adjusted position */}
+      <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
         <PostForm 
           onSubmit={handleNewPost}
           canPost={remainingPosts > 0}
