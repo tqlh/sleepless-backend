@@ -19,6 +19,7 @@ function App() {
   const [footerMessage, setFooterMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showBackground, setShowBackground] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -59,6 +60,8 @@ function App() {
         }
       } finally {
         setIsLoading(false);
+        // Delay showing background elements to prevent flash
+        setTimeout(() => setShowBackground(true), 100);
       }
     };
 
@@ -266,22 +269,22 @@ function App() {
         />
       </div>
       
-      {/* Enhanced background elements with more opacity */}
-      <div className={`absolute inset-0 pointer-events-none transition-all duration-300 ${isFormExpanded ? 'blur-sm' : ''}`}>
+      {/* Enhanced background elements with fade-in transition */}
+      <div className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${isFormExpanded ? 'blur-sm' : ''} ${showBackground ? 'opacity-100' : 'opacity-0'}`}>
         {/* Static cozy elements with increased opacity */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200/8 rounded-full blur-3xl"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-300/6 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-40 left-20 w-40 h-40 bg-amber-200/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-28 h-28 bg-yellow-200/8 rounded-full blur-2xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-200/6 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200/8 rounded-full blur-3xl transition-all duration-1000"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-300/6 rounded-full blur-2xl transition-all duration-1000"></div>
+        <div className="absolute bottom-40 left-20 w-40 h-40 bg-amber-200/10 rounded-full blur-3xl transition-all duration-1000"></div>
+        <div className="absolute bottom-20 right-10 w-28 h-28 bg-yellow-200/8 rounded-full blur-2xl transition-all duration-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-200/6 rounded-full blur-3xl transition-all duration-1000"></div>
         
         {/* Additional cozy warmth with more opacity */}
-        <div className="absolute top-1/4 left-1/4 w-16 h-16 bg-orange-200/12 rounded-full blur-xl"></div>
-        <div className="absolute top-3/4 right-1/4 w-20 h-20 bg-amber-300/8 rounded-full blur-xl"></div>
+        <div className="absolute top-1/4 left-1/4 w-16 h-16 bg-orange-200/12 rounded-full blur-xl transition-all duration-1000"></div>
+        <div className="absolute top-3/4 right-1/4 w-20 h-20 bg-amber-300/8 rounded-full blur-xl transition-all duration-1000"></div>
         
         {/* Warm corner glows with increased opacity */}
-        <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-amber-200/8 to-transparent blur-2xl"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-200/6 to-transparent blur-2xl"></div>
+        <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-amber-200/8 to-transparent blur-2xl transition-all duration-1000"></div>
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-200/6 to-transparent blur-2xl transition-all duration-1000"></div>
       </div>
     </div>
   );
