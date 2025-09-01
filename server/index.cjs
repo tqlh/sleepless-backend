@@ -142,6 +142,27 @@ app.patch('/api/posts/:id/bookmark', (req, res) => {
   );
 });
 
+// DELETE endpoint - ADD THIS SECTION
+app.delete('/api/posts/:id', (req, res) => {
+  const { id } = req.params;
+  
+  db.run(
+    "DELETE FROM posts WHERE id = ?",
+    [id],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      
+      if (this.changes > 0) {
+        res.json({ message: 'Post deleted successfully' });
+      } else {
+        res.status(404).json({ error: 'Post not found' });
+      }
+    }
+  );
+});
+
 // Get daily post count
 app.get('/api/daily-count/:fingerprint', (req, res) => {
   const { fingerprint } = req.params;
