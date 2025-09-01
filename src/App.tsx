@@ -255,7 +255,7 @@ function App() {
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-serif">
       {error && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-900/80 text-yellow-200 px-4 py-2 rounded-lg z-50">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-neutral-800/90 text-neutral-200 px-4 py-2 rounded-lg z-50 border border-neutral-600">
           {error}
         </div>
       )}
