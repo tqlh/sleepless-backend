@@ -6,37 +6,17 @@ interface AnimatedLogoProps {
 }
 
 const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
-  const [sunProgress, setSunProgress] = useState(0);
-  const [moonProgress, setMoonProgress] = useState(0);
   const [isNightTime, setIsNightTime] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       const hours = now.getHours();
-      const minutes = now.getMinutes();
       
-      // Check if it's night time (6 PM to 6 AM)
-      const isNight = hours >= 18 || hours < 6;
+      // Day time: 6 AM to 8 PM (show sun)
+      // Night time: 8 PM to 6 AM (show moon)
+      const isNight = hours >= 20 || hours < 6;
       setIsNightTime(isNight);
-      
-      // Sun animation progress (0 = 5AM, 0.5 = 12:30PM, 1 = 8PM)
-      if (hours >= 5 && hours < 20) {
-        const totalMinutes = (hours - 5) * 60 + minutes;
-        const progress = totalMinutes / (15 * 60); // 15 hours (5AM to 8PM)
-        setSunProgress(progress);
-      } else {
-        setSunProgress(0); // Reset when not in day time
-      }
-
-      // Moon animation progress (0 = 5PM, 0.5 = 12AM, 1 = 7AM)
-      if (hours >= 17 || hours < 7) {
-        const totalMinutes = hours >= 17 ? (hours - 17) * 60 + minutes : (hours + 7) * 60 + minutes;
-        const progress = totalMinutes / (14 * 60); // 14 hours (5PM to 7AM)
-        setMoonProgress(progress);
-      } else {
-        setMoonProgress(0); // Reset when not in night time
-      }
     };
 
     updateTime();
@@ -44,7 +24,7 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // If loading, show clean centered sun/moon without portal lines
+  // If loading, show clean centered sun/moon
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center space-y-4">
@@ -85,40 +65,42 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
     );
   }
 
-  // Sun Y position: starts at -30px (5AM), peaks at 4.5px (12:30PM), then back to -30px (8PM)
-  const sunY = -30 + (sunProgress <= 0.5 ? sunProgress * 112 : (1 - sunProgress) * 65);
-
-  // Moon Y position: starts at 60px (5PM), peaks at 92.5px (12AM), then back to 60px (7AM)
-  const moonY = 60 + (moonProgress <= 0.5 ? moonProgress * -75 : (1 - moonProgress) * 150);
-
   return (
-    <div className="relative w-8 h-20 overflow-hidden animate-breathe">
-      {/* Top portal line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-amber-200"
+    <div className="relative w-8 h-20 animate-breathe">
+      {/* Portal lines - now transparent */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-transparent"
         style={{ marginLeft: '-32px', marginRight: '-16px' }} />
-      {/* Bottom portal line */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-amber-200"
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-transparent"
         style={{ marginLeft: '-32px', marginRight: '-16px' }} />
       
-      {/* Sun - slides into portal by 8PM */}
-      <Sun
-        className="absolute w-8 h-8 text-amber-200 transition-all duration-1000 ease-in-out"
-        style={{
-          transform: `translateY(${sunY}px) translateX(0px)`,
-          opacity: sunProgress > 0 ? 1 : 0,
-          filter: 'drop-shadow(0 0 6px rgba(255,248,220,0.7))'
-        }}
-      />
-
-      {/* Moon - slides into portal by 7AM */}
-      <Moon
-        className="absolute w-8 h-8 text-amber-200 transition-all duration-1000 ease-in-out"
-        style={{
-          transform: `translateY(${moonY}px) translateX(0px)`,
-          opacity: moonProgress > 0 ? 1 : 0,
-          filter: 'drop-shadow(0 0 6px rgba(255,248,220,0.7))'
-        }}
-      />
+      {/* Sun/Moon in the center */}
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        {isNightTime ? (
+          // Night time - show moon with glow
+          <div className="relative">
+            <Moon
+              className="w-8 h-8 text-amber-200 transition-opacity duration-1000"
+              style={{
+                filter: 'drop-shadow(0 0 8px rgba(255,248,220,0.8)) drop-shadow(0 0 16px rgba(255,248,220,0.5)) drop-shadow(0 0 24px rgba(255,248,220,0.3))'
+              }}
+            />
+            {/* Additional glow effect */}
+            <div className="absolute inset-0 w-8 h-8 bg-amber-200/30 rounded-full blur-md"></div>
+          </div>
+        ) : (
+          // Day time - show sun with glow
+          <div className="relative">
+            <Sun
+              className="w-8 h-8 text-amber-200 transition-opacity duration-1000"
+              style={{
+                filter: 'drop-shadow(0 0 8px rgba(255,248,220,0.8)) drop-shadow(0 0 16px rgba(255,248,220,0.5)) drop-shadow(0 0 24px rgba(255,248,220,0.3))'
+              }}
+            />
+            {/* Additional glow effect */}
+            <div className="absolute inset-0 w-8 h-8 bg-amber-200/30 rounded-full blur-md"></div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
