@@ -136,15 +136,14 @@ function App() {
     if (wordCount < 3) {
       const cuteMessages = [
         "please tell me more, don't be shy...",
-        "share a bit more of your thoughts with us",
-        "we'd love to hear more from you",
         "just a few more words to make it special",
         "your thoughts deserve more space to breathe"
       ];
       const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
       setError(randomMessage);
       setTimeout(() => setError(null), 3000);
-      return;
+      // Throw an error to prevent form from closing
+      throw new Error('Word count too low');
     }
 
     try {
@@ -167,7 +166,7 @@ function App() {
       // Fallback to local storage
       if (!canPostToday()) {
         alert('You have reached your daily posting limit. Please try again tomorrow.');
-        return;
+        throw new Error('Daily limit reached');
       }
 
       const newPost: PostData = {
@@ -274,13 +273,13 @@ function App() {
       
       {/* Header - reduced height */}
       <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-2xl border-b border-neutral-700/20 transition-all duration-300 ${isFormExpanded ? 'blur-sm bg-neutral-900/95' : 'bg-neutral-900/80'}`}>
-        <div className="container mx-auto px-6 py-1 md:py-2">
+        <div className="container mx-auto px-6 py-2 md:py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <AnimatedLogo />
-              <span className="text-2xl md:text-4xl font-serif font-light tracking-[0.15em] hover:transition-all duration-300 cursor-pointer text-amber-200 hover:text-amber-100">
-  sleepless
-</span>
+              <span className="text-2xl md:text-4xl font-serif font-light text-amber-200 tracking-[0.15em] hover:text-amber-100 transition-all duration-300 cursor-pointer">
+                sleepless
+              </span>
             </div>
             <div className="flex items-center space-x-6">
               <button
@@ -331,7 +330,9 @@ function App() {
       
       {/* Enhanced Footer with stronger blur */}
       <footer className={`fixed bottom-0 left-0 right-0 z-10 transition-all duration-300 ${isFormExpanded ? 'blur-sm' : ''}`}>
-        <div className={`border-t border-neutral-700/20 backdrop-blur-2xl transition-all duration-300 ${isFormExpanded ? 'bg-neutral-900/95' : 'bg-neutral-900/80'}`}>
+        <div className={`border-t backdrop-blur-2xl transition-all duration-300 ${
+          isFormExpanded ? 'bg-neutral-900/95' : 'bg-neutral-900/80'
+        } bg-neutral-900/80 border-neutral-700/20`}>
           <div className="container mx-auto px-6 py-2 text-center">
             <p className="text-neutral-600 text-sm italic">
               {footerMessage}
@@ -347,16 +348,18 @@ function App() {
       
       {/* Post Form - adjusted position */}
       <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
-        <PostForm 
-          onSubmit={handleNewPost}
-          canPost={isAdmin || remainingPosts > 0}
-          remainingPosts={remainingPosts}
-          onExpandChange={setIsFormExpanded}
-        />
+      <PostForm 
+  onSubmit={handleNewPost}
+  canPost={isAdmin || remainingPosts > 0}
+  remainingPosts={isAdmin ? 999 : remainingPosts}
+  onExpandChange={setIsFormExpanded}
+/>
       </div>
       
       {/* Enhanced background elements with fade-in transition */}
-      <div className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${isFormExpanded ? 'blur-sm' : ''} ${showBackground ? 'opacity-100' : 'opacity-0'}`}>
+      <div className={`absolute inset-0 pointer-events-none transition-all duration-1000 ${
+        isFormExpanded ? 'blur-sm' : ''
+      } ${showBackground ? 'opacity-100' : 'opacity-0'}`}>
         {/* Static cozy elements with increased opacity */}
         <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200/8 rounded-full blur-3xl transition-all duration-1000"></div>
         <div className="absolute top-40 right-20 w-24 h-24 bg-orange-300/6 rounded-full blur-2xl transition-all duration-1000"></div>
