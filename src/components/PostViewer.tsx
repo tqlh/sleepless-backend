@@ -124,6 +124,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
     if (e.nativeEvent) {
       e.nativeEvent.stopImmediatePropagation();
     }
+    console.log('handleDeleteClick called:', { isAdmin, onDeletePost, postId });
     if (isAdmin && onDeletePost) {
       onDeletePost(postId);
     }
