@@ -150,11 +150,13 @@ const PostForm: React.FC<PostFormProps> = ({ onSubmit, canPost, remainingPosts, 
     
     try {
       const language = detectLanguage(content);
-      onSubmit(content.trim(), language);
+      await onSubmit(content.trim(), language);
+      // Only close and clear content on successful submission
       setContent('');
       handleClose();
     } catch (error) {
       console.error('Error submitting post:', error);
+      // Don't close the form on error
     } finally {
       setIsSubmitting(false);
     }
@@ -227,10 +229,10 @@ const PostForm: React.FC<PostFormProps> = ({ onSubmit, canPost, remainingPosts, 
               {showTextarea && (
                 <div className="flex justify-between items-center pt-2 border-t border-neutral-700/50">
                   <div className="flex items-center space-x-4 text-sm text-neutral-500">
-  <span>{content.length}/500</span>
-  <span>•</span>
-  <span>Posts: {remainingPosts}/5</span>
-</div>
+                    <span>{content.length}/500</span>
+                    <span>•</span>
+                    <span>Posts: {remainingPosts}/5</span>
+                  </div>
                   
                   <div className="flex space-x-3">
                     <button
