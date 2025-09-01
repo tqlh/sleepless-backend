@@ -195,15 +195,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/api/fix-timestamps', (req, res) => {
-  db.run('UPDATE posts SET timestamp = datetime("now")', (err) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ message: 'All posts updated to current time' });
-  });
-});
-
 app.listen(PORT, () => {
   console.log(`🌙 Sleepless.ink server running on port ${PORT}`);
   console.log(`Database: ${dbPath}`);
