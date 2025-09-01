@@ -10,7 +10,12 @@ const PORT = process.env.PORT || 8080;
 app.use(cors());
 app.use(bodyParser.json());
 
-const dbPath = path.join(__dirname, 'sleepless.db');
+// Use Railway volume in production, local file in development
+const isProduction = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+const dbPath = isProduction 
+  ? '/data/sleepless.db'  // Railway volume path
+  : path.join(__dirname, 'sleepless.db');  // Local development path
+
 const db = new sqlite3.Database(dbPath);
 
 // Force create daily_counts table on startup
