@@ -278,7 +278,7 @@ function App() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <AnimatedLogo />
-              <span className="text-2xl md:text-4xl font-serif font-light text-amber-200 tracking-[0.15em] hover:text-amber-100 transition-all duration-300 cursor-pointer animate-breathe">sleepless.ink</span>
+              <span className="text-2xl md:text-4xl font-serif font-light text-amber-200 tracking-[0.15em] hover:text-amber-100 transition-all duration-300 cursor-pointer animate-breathe">sleepless</span>
             </div>
             <div className="flex items-center space-x-6">
               <button
