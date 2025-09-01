@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
-const AnimatedLogo: React.FC = () => {
+interface AnimatedLogoProps {
+  isLoading?: boolean; // New prop to detect if we're on loading screen
+}
+
+const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
   const [sunProgress, setSunProgress] = useState(0);
   const [moonProgress, setMoonProgress] = useState(0);
+  const [isNightTime, setIsNightTime] = useState(false);
 
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
       const hours = now.getHours();
       const minutes = now.getMinutes();
+      
+      // Check if it's night time (6 PM to 6 AM)
+      const isNight = hours >= 18 || hours < 6;
+      setIsNightTime(isNight);
       
       // Sun animation progress (0 = 5AM, 0.5 = 12:30PM, 1 = 8PM)
       if (hours >= 5 && hours < 20) {
@@ -34,6 +43,41 @@ const AnimatedLogo: React.FC = () => {
     const interval = setInterval(updateTime, 60000); // Check every minute
     return () => clearInterval(interval);
   }, []);
+
+  // If loading, show sun during day and moon during night
+  if (isLoading) {
+    return (
+      <div className="relative w-16 h-16 animate-breathe">
+        {isNightTime ? (
+          // Night time - show glowing moon
+          <>
+            <Moon
+              className="absolute w-16 h-16 text-amber-200"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+            />
+            {/* Additional glow effect */}
+            <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
+          </>
+        ) : (
+          // Day time - show glowing sun
+          <>
+            <Sun
+              className="absolute w-16 h-16 text-amber-200"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+            />
+            {/* Additional glow effect */}
+            <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   // Sun Y position: starts at -30px (5AM), peaks at 4.5px (12:30PM), then back to -30px (8PM)
   const sunY = -30 + (sunProgress <= 0.5 ? sunProgress * 112 : (1 - sunProgress) * 65);
