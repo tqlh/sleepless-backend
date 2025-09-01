@@ -349,7 +349,7 @@ function App() {
       <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
         <PostForm 
           onSubmit={handleNewPost}
-          canPost={remainingPosts > 0}
+          canPost={isAdmin || remainingPosts > 0}
           remainingPosts={remainingPosts}
           onExpandChange={setIsFormExpanded}
         />
