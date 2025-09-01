@@ -86,3 +86,78 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
+
+// Helper functions for backward compatibility
+export const getStoredPosts = async (): Promise<PostData[]> => {
+  try {
+    return await apiService.getPosts();
+  } catch (error) {
+    console.error('Failed to fetch posts from API, falling back to localStorage:', error);
+    // Fallback to localStorage if API is unavailable
+    const stored = localStorage.getItem('sleepless_posts');
+    if (!stored) return [];
+    
+    return JSON.parse(stored).map((post: any) => ({
+      ...post,
+      timestamp: new Date(post.timestamp)
+    }));
+  }
+};
+
+export const storePost = async (newPost: PostData, currentPosts: PostData[]): Promise<PostData[]> => {
+  try {
+    const createdPost = await apiService.createPost(newPost.content, newPost.language);
+    // Return updated posts list
+    return await apiService.getPosts();
+  } catch (error) {
+    console.error('Failed to create post via API:', error);
+    throw error;
+  }
+};
+
+export const getDailyPostCount = async (): Promise<number> => {
+  try {
+    const result = await apiService.getDailyCount();
+    return result.count;
+  } catch (error) {
+    console.error('Failed to get daily count from API:', error);
+    // Fallback to localStorage
+    const today = new Date().toDateString();
+    const lastPostDate = localStorage.getItem('sleepless_last_post_date');
+    
+    if (lastPostDate !== today) {
+      return 0;
+    }
+    
+    return parseInt(localStorage.getItem('sleepless_daily_count') || '0', 10);
+  }
+};
+
+export const incrementDailyPostCount = async (): Promise<void> => {
+  // This is now handled by the API when creating posts
+  // Keep for backward compatibility but make it a no-op
+};
+
+export const canPostToday = async (): Promise<boolean> => {
+  try {
+    const result = await apiService.getDailyCount();
+    return result.remaining > 0;
+  } catch (error) {
+    console.error('Failed to check daily limit from API:', error);
+    // Fallback to localStorage
+    const count = await getDailyPostCount();
+    return count < 5;
+  }
+};
+
+export const getRemainingPostsToday = async (): Promise<number> => {
+  try {
+    const result = await apiService.getDailyCount();
+    return result.remaining;
+  } catch (error) {
+    console.error('Failed to get remaining posts from API:', error);
+    // Fallback to localStorage
+    const count = await getDailyPostCount();
+    return Math.max(0, 5 - count);
+  }
+};
