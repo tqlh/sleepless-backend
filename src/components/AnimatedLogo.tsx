@@ -44,15 +44,15 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // If loading, show sun during day and moon during night
+  // If loading, show clean centered sun/moon without portal lines
   if (isLoading) {
     return (
-      <div className="relative w-16 h-16 animate-breathe">
+      <div className="relative w-16 h-16 flex items-center justify-center">
         {isNightTime ? (
           // Night time - show glowing moon
-          <>
+          <div className="relative">
             <Moon
-              className="absolute w-16 h-16 text-amber-200"
+              className="w-16 h-16 text-amber-200"
               style={{
                 filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
                 animation: 'pulse 2s ease-in-out infinite'
@@ -60,12 +60,12 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
             />
             {/* Additional glow effect */}
             <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
-          </>
+          </div>
         ) : (
           // Day time - show glowing sun
-          <>
+          <div className="relative">
             <Sun
-              className="absolute w-16 h-16 text-amber-200"
+              className="w-16 h-16 text-amber-200"
               style={{
                 filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
                 animation: 'pulse 2s ease-in-out infinite'
@@ -73,7 +73,7 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
             />
             {/* Additional glow effect */}
             <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
-          </>
+          </div>
         )}
       </div>
     );
