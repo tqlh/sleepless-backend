@@ -21,11 +21,11 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
   autoFocus,
   placeholder = ''
 }, ref) => {
-  const [displayValue, setDisplayValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout>();
   const lastValueRef = useRef('');
+  const cursorPositionRef = useRef(0);
 
   // Combine refs
   const combinedRef = (node: HTMLTextAreaElement) => {
@@ -43,7 +43,7 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.max(60, textareaRef.current.scrollHeight)}px`;
     }
-  }, [displayValue]);
+  }, [value]);
 
   // Handle typing animation
   useEffect(() => {
@@ -54,7 +54,6 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
     
     if (isDeleting) {
       // Instant deletion
-      setDisplayValue(value);
       setIsTyping(false);
       lastValueRef.current = value;
       return;
@@ -68,6 +67,11 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
         clearTimeout(typingTimeoutRef.current);
       }
       
+      // Store cursor position before animation
+      if (textareaRef.current) {
+        cursorPositionRef.current = textareaRef.current.selectionStart;
+      }
+      
       // Animate typing for new characters
       const startIndex = lastValueRef.current.length;
       const endIndex = value.length;
@@ -75,7 +79,6 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
       
       const typeNextChar = () => {
         if (currentCharIndex < endIndex) {
-          setDisplayValue(value.slice(0, currentCharIndex + 1));
           currentCharIndex++;
           
           // Variable typing speed - faster for spaces, slower for punctuation
@@ -90,6 +93,12 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
           typingTimeoutRef.current = setTimeout(typeNextChar, delay);
         } else {
           setIsTyping(false);
+          // Restore cursor position after animation
+          if (textareaRef.current) {
+            setTimeout(() => {
+              textareaRef.current?.setSelectionRange(cursorPositionRef.current, cursorPositionRef.current);
+            }, 0);
+          }
         }
       };
       
@@ -98,7 +107,6 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
     
     lastValueRef.current = value;
   }, [value]);
-
 
   // Cleanup on unmount
   useEffect(() => {
@@ -110,6 +118,8 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // Store cursor position
+    cursorPositionRef.current = e.target.selectionStart;
     onChange(e);
   };
 
@@ -128,7 +138,7 @@ const TypingTextarea = forwardRef<HTMLTextAreaElement, TypingTextareaProps>(({
   return (
     <textarea
       ref={combinedRef}
-      value={displayValue}
+      value={value} // Use actual value instead of displayValue
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       className={className}
