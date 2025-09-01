@@ -77,9 +77,9 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
             </div>
           )}
         </div>
-        {/* Add your loading text here */}
+        {/* Loading thoughts text */}
         <div className="text-amber-200 text-sm font-medium animate-pulse">
-          Loading...
+          Loading thoughts
         </div>
       </div>
     );
