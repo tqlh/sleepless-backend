@@ -1,10 +1,16 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'sleepless.db');
+// Use Railway volume in production, local file in development
+const isProduction = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+const dbPath = isProduction 
+  ? '/data/sleepless.db'  // Railway volume path
+  : path.join(__dirname, 'sleepless.db');  // Local development path
+
 const db = new sqlite3.Database(dbPath);
 
 console.log('🌙 Setting up sleepless.ink database...');
+console.log(`Database path: ${dbPath}`);
 
 // Create posts table
 db.run(`
