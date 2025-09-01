@@ -47,34 +47,40 @@ const AnimatedLogo: React.FC<AnimatedLogoProps> = ({ isLoading = false }) => {
   // If loading, show clean centered sun/moon without portal lines
   if (isLoading) {
     return (
-      <div className="relative w-16 h-16 flex items-center justify-center">
-        {isNightTime ? (
-          // Night time - show glowing moon
-          <div className="relative">
-            <Moon
-              className="w-16 h-16 text-amber-200"
-              style={{
-                filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
-                animation: 'pulse 2s ease-in-out infinite'
-              }}
-            />
-            {/* Additional glow effect */}
-            <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
-          </div>
-        ) : (
-          // Day time - show glowing sun
-          <div className="relative">
-            <Sun
-              className="w-16 h-16 text-amber-200"
-              style={{
-                filter: 'drop-shadow(0 0 20px rgba(255,248,220,0.8)) drop-shadow(0 0 40px rgba(255,248,220,0.4))',
-                animation: 'pulse 2s ease-in-out infinite'
-              }}
-            />
-            {/* Additional glow effect */}
-            <div className="absolute inset-0 w-16 h-16 bg-amber-200/20 rounded-full blur-xl animate-pulse"></div>
-          </div>
-        )}
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="relative w-8 h-8 flex items-center justify-center">
+          {isNightTime ? (
+            // Night time - show glowing moon
+            <div className="relative">
+              <Moon
+                className="w-8 h-8 text-amber-200"
+                style={{
+                  filter: 'drop-shadow(0 0 10px rgba(255,248,220,0.8)) drop-shadow(0 0 20px rgba(255,248,220,0.4))',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              />
+              {/* Additional glow effect */}
+              <div className="absolute inset-0 w-8 h-8 bg-amber-200/20 rounded-full blur-lg animate-pulse"></div>
+            </div>
+          ) : (
+            // Day time - show glowing sun
+            <div className="relative">
+              <Sun
+                className="w-8 h-8 text-amber-200"
+                style={{
+                  filter: 'drop-shadow(0 0 10px rgba(255,248,220,0.8)) drop-shadow(0 0 20px rgba(255,248,220,0.4))',
+                  animation: 'pulse 2s ease-in-out infinite'
+                }}
+              />
+              {/* Additional glow effect */}
+              <div className="absolute inset-0 w-8 h-8 bg-amber-200/20 rounded-full blur-lg animate-pulse"></div>
+            </div>
+          )}
+        </div>
+        {/* Add your loading text here */}
+        <div className="text-amber-200 text-sm font-medium animate-pulse">
+          Loading...
+        </div>
       </div>
     );
   }
