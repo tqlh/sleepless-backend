@@ -20,6 +20,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showBackground, setShowBackground] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [passwordBuffer, setPasswordBuffer] = useState('');
+  const [lastKeyTime, setLastKeyTime] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -84,7 +87,66 @@ function App() {
     setFooterMessage(randomMessage);
   }, [posts.length]);
 
+  // Secret password detection
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't capture if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+        return;
+      }
+
+      const now = Date.now();
+      
+      // Reset buffer if too much time has passed between keystrokes (3 seconds)
+      if (now - lastKeyTime > 3000) {
+        setPasswordBuffer('');
+      }
+      
+      setLastKeyTime(now);
+      
+      // Add character to buffer
+      const newBuffer = passwordBuffer + e.key;
+      setPasswordBuffer(newBuffer);
+      
+      // Check for secret password
+      const secretPassword = 'admin123';
+      
+      if (newBuffer.includes(secretPassword)) {
+        setIsAdmin(true);
+        setPasswordBuffer('');
+        setError('Admin mode activated');
+        setTimeout(() => setError(null), 2000);
+      }
+      
+      // Limit buffer length to prevent memory issues
+      if (newBuffer.length > 20) {
+        setPasswordBuffer(newBuffer.slice(-10));
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [passwordBuffer, lastKeyTime]);
+
   const handleNewPost = useCallback(async (content: string, language: string = 'en') => {
+    // Check minimum word count (3 words)
+    const wordCount = content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    if (wordCount < 3) {
+      const cuteMessages = [
+        "please tell me more, don't be shy...",
+        "share a bit more of your thoughts with us",
+        "we'd love to hear more from you",
+        "just a few more words to make it special",
+        "your thoughts deserve more space to breathe"
+      ];
+      const randomMessage = cuteMessages[Math.floor(Math.random() * cuteMessages.length)];
+      setError(randomMessage);
+      setTimeout(() => setError(null), 3000);
+      return;
+    }
+
     try {
       const newPost = await apiService.createPost(content, language);
       
@@ -144,6 +206,21 @@ function App() {
     }
   }, [posts]);
 
+  const handleDeletePost = useCallback(async (postId: string) => {
+    if (!isAdmin) return;
+
+    try {
+      await apiService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setError('Post deleted successfully');
+      setTimeout(() => setError(null), 2000);
+    } catch (err) {
+      console.error('Failed to delete post:', err);
+      setError('Failed to delete post');
+      setTimeout(() => setError(null), 2000);
+    }
+  }, [isAdmin]);
+
   const handleCurrentPostChange = useCallback((postId: string) => {
     if (!showBookmarksOnly) {
       setLastViewedPostId(postId);
@@ -180,6 +257,13 @@ function App() {
       {error && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-900/80 text-yellow-200 px-4 py-2 rounded-lg z-50">
           {error}
+        </div>
+      )}
+      
+      {/* Admin indicator */}
+      {isAdmin && (
+        <div className="fixed top-4 right-4 bg-red-900/80 text-red-200 px-3 py-1 rounded-lg z-50 text-sm">
+          ADMIN MODE
         </div>
       )}
       
@@ -235,6 +319,8 @@ function App() {
                 showBookmarksOnly={showBookmarksOnly}
                 lastViewedPostId={lastViewedPostId}
                 onCurrentPostChange={handleCurrentPostChange}
+                isAdmin={isAdmin}
+                onDeletePost={handleDeletePost}
               />
             )
           )}
