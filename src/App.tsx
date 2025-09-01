@@ -185,8 +185,8 @@ function App() {
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 pointer-events-none" />
       )}
       
-      {/* Header - gets additional blur when form is expanded */}
-      <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-xl border-b border-neutral-700/20 transition-all duration-300 ${isFormExpanded ? 'blur-sm bg-neutral-900/95' : 'bg-neutral-900/60'}`}>
+      {/* Header - enhanced blur effect */}
+      <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-2xl border-b border-neutral-700/20 transition-all duration-300 ${isFormExpanded ? 'blur-sm bg-neutral-900/95' : 'bg-neutral-900/80'}`}>
         <div className="container mx-auto px-6 py-0.5 md:py-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -240,9 +240,9 @@ function App() {
         </div>
       </div>
       
-      {/* Proper Footer */}
+      {/* Enhanced Footer with stronger blur */}
       <footer className={`fixed bottom-0 left-0 right-0 z-10 transition-all duration-300 ${isFormExpanded ? 'blur-sm' : ''}`}>
-        <div className={`border-t border-neutral-700/20 backdrop-blur-sm transition-all duration-300 ${isFormExpanded ? 'bg-neutral-900/95' : 'bg-neutral-900/60'}`}>
+        <div className={`border-t border-neutral-700/20 backdrop-blur-2xl transition-all duration-300 ${isFormExpanded ? 'bg-neutral-900/95' : 'bg-neutral-900/80'}`}>
           <div className="container mx-auto px-6 py-2 text-center">
             <p className="text-neutral-600 text-sm italic">
               {footerMessage}
@@ -266,22 +266,22 @@ function App() {
         />
       </div>
       
-      {/* Subtle background elements */}
+      {/* Enhanced background elements with more opacity */}
       <div className={`absolute inset-0 pointer-events-none transition-all duration-300 ${isFormExpanded ? 'blur-sm' : ''}`}>
-        {/* Static cozy elements */}
-        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200/2 rounded-full blur-3xl"></div>
-        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-300/1 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-40 left-20 w-40 h-40 bg-amber-200/1.5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-28 h-28 bg-yellow-200/1 rounded-full blur-2xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-200/1 rounded-full blur-3xl"></div>
+        {/* Static cozy elements with increased opacity */}
+        <div className="absolute top-20 left-10 w-32 h-32 bg-amber-200/8 rounded-full blur-3xl"></div>
+        <div className="absolute top-40 right-20 w-24 h-24 bg-orange-300/6 rounded-full blur-2xl"></div>
+        <div className="absolute bottom-40 left-20 w-40 h-40 bg-amber-200/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 right-10 w-28 h-28 bg-yellow-200/8 rounded-full blur-2xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-200/6 rounded-full blur-3xl"></div>
         
-        {/* Additional cozy warmth */}
-        <div className="absolute top-1/4 left-1/4 w-16 h-16 bg-orange-200/1.5 rounded-full blur-xl"></div>
-        <div className="absolute top-3/4 right-1/4 w-20 h-20 bg-amber-300/1 rounded-full blur-xl"></div>
+        {/* Additional cozy warmth with more opacity */}
+        <div className="absolute top-1/4 left-1/4 w-16 h-16 bg-orange-200/12 rounded-full blur-xl"></div>
+        <div className="absolute top-3/4 right-1/4 w-20 h-20 bg-amber-300/8 rounded-full blur-xl"></div>
         
-        {/* Warm corner glows */}
-        <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-amber-200/1 to-transparent blur-2xl"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-200/0.8 to-transparent blur-2xl"></div>
+        {/* Warm corner glows with increased opacity */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-amber-200/8 to-transparent blur-2xl"></div>
+        <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-200/6 to-transparent blur-2xl"></div>
       </div>
     </div>
   );
