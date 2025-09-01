@@ -198,6 +198,24 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Add this temporary endpoint to your server/index.cjs
+app.get('/api/reset-daily-count/:fingerprint', (req, res) => {
+  const { fingerprint } = req.params;
+  const { timezone } = req.query;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone || 'UTC' });
+  
+  db.run(
+    "DELETE FROM daily_counts WHERE fingerprint = ? AND date = ?",
+    [fingerprint, today],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ message: 'Daily count reset successfully' });
+    }
+  );
+});
+
 app.listen(PORT, () => {
   console.log(`🌙 Sleepless.ink server running on port ${PORT}`);
   console.log(`Database: ${dbPath}`);
