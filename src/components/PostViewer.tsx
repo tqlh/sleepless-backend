@@ -25,7 +25,8 @@ const PostViewer: React.FC<PostViewerProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [shuffledPosts, setShuffledPosts] = useState<PostData[]>([]);
-  const [hasSeenFirstPost, setHasSeenFirstPost] = useState(false);
+  const [firstPostSeen, setFirstPostSeen] = useState(false);
+  const [firstPostId, setFirstPostId] = useState<string | null>(null);
 
   // Memoize shuffled posts to prevent unnecessary re-shuffling
   const memoizedShuffledPosts = useMemo(() => {
@@ -61,12 +62,16 @@ const PostViewer: React.FC<PostViewerProps> = ({
     }
   }, [currentPost, onCurrentPostChange]);
 
+  // Track the first post that appears
+  useEffect(() => {
+    if (currentPost && !firstPostId) {
+      setFirstPostId(currentPost.id);
+    }
+  }, [currentPost, firstPostId]);
+
   const nextPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
-      if (currentIndex === 0) {
-        setHasSeenFirstPost(true);
-      }
       
       // Random jump to any post
       const randomIndex = Math.floor(Math.random() * shuffledPosts.length);
@@ -74,9 +79,14 @@ const PostViewer: React.FC<PostViewerProps> = ({
       setTimeout(() => {
         setCurrentIndex(randomIndex);
         setIsTransitioning(false);
+        
+        // Mark that we've seen the first post after navigating
+        if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
+          setFirstPostSeen(true);
+        }
       }, 150);
     }
-  }, [shuffledPosts.length, isTransitioning, currentIndex]);
+  }, [shuffledPosts.length, isTransitioning, firstPostId]);
 
   const previousPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
@@ -91,9 +101,14 @@ const PostViewer: React.FC<PostViewerProps> = ({
       setTimeout(() => {
         setCurrentIndex(randomIndex);
         setIsTransitioning(false);
+        
+        // Mark that we've seen the first post after navigating
+        if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
+          setFirstPostSeen(true);
+        }
       }, 150);
     }
-  }, [currentIndex, shuffledPosts.length, isTransitioning]);
+  }, [currentIndex, shuffledPosts.length, isTransitioning, firstPostId]);
 
   // Keyboard navigation with memoized handlers
   useEffect(() => {
@@ -220,16 +235,19 @@ const PostViewer: React.FC<PostViewerProps> = ({
         
         <div className="absolute inset-0 bg-gradient-to-br from-amber-200/5 to-transparent rounded-2xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
         
-        <div className={`relative bg-neutral-800/40 backdrop-blur-md rounded-2xl border border-neutral-700/40 shadow-2xl min-h-[200px] overflow-hidden transition-opacity duration-300 ${
-  isTransitioning ? 'opacity-70' : 'opacity-100'
-}`}>
+        <div className="relative bg-neutral-800/40 backdrop-blur-md rounded-2xl border border-neutral-700/40 shadow-2xl min-h-[200px] overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-200/3 via-transparent to-neutral-900/20 rounded-2xl"></div>
           
           <div className="relative z-10 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-neutral-500">
-                  <div className="w-2 h-2 rounded-full bg-amber-200/60 animate-pulse-slow"></div>
+                  <div 
+                    className="w-2 h-2 rounded-full bg-amber-200/60"
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.4))'
+                    }}
+                  ></div>
                   <span className="text-xs font-light tracking-wide">{formatTimestamp(currentPost?.timestamp)}</span>
                 </div>
               </div>
@@ -264,11 +282,11 @@ const PostViewer: React.FC<PostViewerProps> = ({
               <blockquote className="text-amber-50 leading-relaxed text-lg relative font-serif font-light">
                 <div className="absolute -left-2 -top-1 text-2xl text-amber-200/30 font-serif">"</div>
                 <p className="pl-4 pr-3">
-                  {currentIndex === 0 && !hasSeenFirstPost ? (
+                  {currentPost?.id === firstPostId && !firstPostSeen ? (
                     <TypewriterText 
                       key={currentPost.id}
                       text={currentPost?.content || ''}
-                      speed={40}
+                      speed={85}
                     />
                   ) : (
                     currentPost?.content || ''
@@ -297,7 +315,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
         <button
           onClick={nextPost}
           disabled={shuffledPosts.length === 0}
-          className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
+          className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
         >
           <span className="text-xs font-light tracking-wide">Next</span>
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
