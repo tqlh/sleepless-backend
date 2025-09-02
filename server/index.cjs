@@ -142,7 +142,7 @@ app.patch('/api/posts/:id/bookmark', (req, res) => {
   );
 });
 
-// DELETE endpoint - ADD THIS SECTION
+// DELETE endpoint
 app.delete('/api/posts/:id', (req, res) => {
   const { id } = req.params;
   
