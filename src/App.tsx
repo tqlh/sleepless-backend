@@ -328,19 +328,47 @@ function App() {
         </div>
       </div>
       
-      {/* Enhanced Footer with stronger blur */}
+      {/* Enhanced Footer with animations */}
       <footer className={`fixed bottom-0 left-0 right-0 z-10 transition-all duration-300 ${isFormExpanded ? 'blur-sm' : ''}`}>
         <div className={`border-t backdrop-blur-2xl transition-all duration-300 ${
           isFormExpanded ? 'bg-neutral-900/95' : 'bg-neutral-900/80'
         } bg-neutral-900/80 border-neutral-700/20`}>
           <div className="container mx-auto px-6 py-2 text-center">
-            <p className="text-neutral-600 text-sm italic">
+            <p 
+              className="text-neutral-600 text-sm italic"
+              style={{
+                animation: 'fadeInUp 0.8s ease-out forwards',
+                opacity: 0,
+                transform: 'translateY(10px)'
+              }}
+            >
               {footerMessage}
             </p>
-            <p className="text-neutral-700 text-xs">
-              {posts.length === 0 ? 'be the first to share a thought' : 
-               posts.length === 1 ? '1 person shared their thoughts' :
-               `${posts.length} people shared their thoughts`}
+            <p 
+              className="text-neutral-700 text-xs mt-1"
+              style={{
+                animation: 'fadeInUp 0.8s ease-out 0.2s forwards',
+                opacity: 0,
+                transform: 'translateY(10px)'
+              }}
+            >
+              {(() => {
+                const messages = [
+                  'thoughts drift through the darkness',
+                  'whispers echo in the void',
+                  'midnight musings shared',
+                  'sleepless thoughts recorded',
+                  'thoughts left in the dark',
+                  'nocturnal reflections',
+                  'thoughts whispered to the night'
+                ];
+                
+                if (posts.length === 0) return 'be the first to share a thought';
+                if (posts.length === 1) return '1 thought floats in the night';
+                
+                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                return randomMessage.replace('thoughts', `${posts.length} thoughts`).replace('whispers', `${posts.length} whispers`).replace('musings', `${posts.length} musings`).replace('reflections', `${posts.length} reflections`);
+              })()}
             </p>
           </div>
         </div>
@@ -348,12 +376,12 @@ function App() {
       
       {/* Post Form - adjusted position */}
       <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40 w-full max-w-2xl px-6">
-      <PostForm 
-  onSubmit={handleNewPost}
-  canPost={isAdmin || remainingPosts > 0}
-  remainingPosts={isAdmin ? 999 : remainingPosts}
-  onExpandChange={setIsFormExpanded}
-/>
+        <PostForm 
+          onSubmit={handleNewPost}
+          canPost={isAdmin || remainingPosts > 0}
+          remainingPosts={isAdmin ? 999 : remainingPosts}
+          onExpandChange={setIsFormExpanded}
+        />
       </div>
       
       {/* Enhanced background elements with fade-in transition */}
@@ -375,6 +403,20 @@ function App() {
         <div className="absolute top-0 left-0 w-64 h-64 bg-gradient-to-br from-amber-200/8 to-transparent blur-2xl transition-all duration-1000"></div>
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-gradient-to-tl from-orange-200/6 to-transparent blur-2xl transition-all duration-1000"></div>
       </div>
+
+      {/* Add the CSS animation */}
+      <style>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }
