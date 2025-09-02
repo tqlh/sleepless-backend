@@ -23,7 +23,6 @@ const PostViewer: React.FC<PostViewerProps> = ({
   onDeletePost
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [dotPosition, setDotPosition] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [shuffledPosts, setShuffledPosts] = useState<PostData[]>([]);
   const [hasSeenFirstPost, setHasSeenFirstPost] = useState(false);
@@ -68,20 +67,29 @@ const PostViewer: React.FC<PostViewerProps> = ({
       if (currentIndex === 0) {
         setHasSeenFirstPost(true);
       }
-      setDotPosition((prev) => (prev + 1) % 5);
+      
+      // Random jump to any post
+      const randomIndex = Math.floor(Math.random() * shuffledPosts.length);
+      
       setTimeout(() => {
-        setCurrentIndex((currentIndex + 1) % shuffledPosts.length);
+        setCurrentIndex(randomIndex);
         setIsTransitioning(false);
       }, 150);
     }
-  }, [currentIndex, shuffledPosts.length, isTransitioning]);
+  }, [shuffledPosts.length, isTransitioning, currentIndex]);
 
   const previousPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
-      setDotPosition((prev) => (prev - 1 + 5) % 5);
+      
+      // Random jump to any post (different from next)
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * shuffledPosts.length);
+      } while (randomIndex === currentIndex && shuffledPosts.length > 1);
+      
       setTimeout(() => {
-        setCurrentIndex((currentIndex - 1 + shuffledPosts.length) % shuffledPosts.length);
+        setCurrentIndex(randomIndex);
         setIsTransitioning(false);
       }, 150);
     }
@@ -138,8 +146,9 @@ const PostViewer: React.FC<PostViewerProps> = ({
     if (diffInHours < 1) return 'moments ago';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     const days = Math.floor(diffInHours / 24);
-    if (days === 1) return 'yesterday';
-    return `${days} days ago`;
+    if (days === 1) return 'last night';
+    if (days <= 3) return 'a few nights ago';
+    return 'several nights ago';
   }, []);
 
   // Touch/swipe handling
@@ -209,18 +218,18 @@ const PostViewer: React.FC<PostViewerProps> = ({
       >
         <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-amber-200/40 to-transparent"></div>
         
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/5 to-transparent rounded-2xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-500 animate-card-fade-in"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-200/5 to-transparent rounded-2xl blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-500"></div>
         
-        <div className={`relative bg-neutral-800/40 backdrop-blur-md rounded-2xl border border-neutral-700/40 shadow-2xl min-h-[200px] overflow-hidden transition-all duration-300 ${
-          isTransitioning ? 'opacity-70' : 'opacity-100'
-        } animate-card-fade-in`}>
+        <div className={`relative bg-neutral-800/40 backdrop-blur-md rounded-2xl border border-neutral-700/40 shadow-2xl min-h-[200px] overflow-hidden transition-opacity duration-300 ${
+  isTransitioning ? 'opacity-70' : 'opacity-100'
+}`}>
           <div className="absolute inset-0 bg-gradient-to-br from-amber-200/3 via-transparent to-neutral-900/20 rounded-2xl"></div>
           
           <div className="relative z-10 p-5">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-neutral-500">
-                  <div className="w-2 h-2 rounded-full bg-amber-200/60"></div>
+                  <div className="w-2 h-2 rounded-full bg-amber-200/60 animate-pulse-slow"></div>
                   <span className="text-xs font-light tracking-wide">{formatTimestamp(currentPost?.timestamp)}</span>
                 </div>
               </div>
@@ -252,7 +261,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
             </div>
             
             <div className="mb-4">
-              <blockquote className="text-neutral-300 leading-relaxed text-lg relative font-serif">
+              <blockquote className="text-amber-50 leading-relaxed text-lg relative font-serif font-light">
                 <div className="absolute -left-2 -top-1 text-2xl text-amber-200/30 font-serif">"</div>
                 <p className="pl-4 pr-3">
                   {currentIndex === 0 && !hasSeenFirstPost ? (
@@ -284,28 +293,6 @@ const PostViewer: React.FC<PostViewerProps> = ({
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
           <span className="text-xs font-light tracking-wide">Previous</span>
         </button>
-        
-        {/* Sliding dot indicator */}
-        <div className="flex items-center space-x-3">
-          {/* Simple 5-dot indicator */}
-          <div className="relative flex items-center space-x-2">
-            {/* Background dots */}
-            {[0, 1, 2, 3, 4].map((index) => (
-              <div
-                key={index}
-                className="w-2 h-2 rounded-full bg-neutral-500/60 border border-neutral-400/20"
-              />
-            ))}
-            
-            {/* Moving active dot */}
-            <div 
-              className="absolute w-2 h-2 rounded-full bg-amber-200 shadow-lg shadow-amber-200/50 transition-transform duration-300 ease-out border border-amber-100/30"
-              style={{
-                transform: `translateX(${dotPosition * 16 - 8}px)`
-              }}
-            />
-          </div>
-        </div>
         
         <button
           onClick={nextPost}
