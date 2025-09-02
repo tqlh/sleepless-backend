@@ -286,7 +286,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
                     <TypewriterText 
                       key={currentPost.id}
                       text={currentPost?.content || ''}
-                      speed={85}
+                      speed={35}
                     />
                   ) : (
                     currentPost?.content || ''
