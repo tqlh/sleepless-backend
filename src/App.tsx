@@ -17,6 +17,7 @@ function App() {
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [lastViewedPostId, setLastViewedPostId] = useState<string | null>(null);
   const [footerMessage, setFooterMessage] = useState('');
+  const [footerCountMessage, setFooterCountMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showBackground, setShowBackground] = useState(false);
@@ -85,6 +86,29 @@ function App() {
     
     const randomMessage = messages[Math.floor(Math.random() * messages.length)];
     setFooterMessage(randomMessage);
+  }, [posts.length]);
+
+  // Update footer count message based on post count
+  useEffect(() => {
+    const messages = [
+      'thoughts drift through the darkness',
+      'whispers echo in the void',
+      'midnight musings shared',
+      'sleepless thoughts recorded',
+      'thoughts left in the dark',
+      'nocturnal reflections',
+      'thoughts whispered to the night'
+    ];
+    
+    if (posts.length === 0) {
+      setFooterCountMessage('be the first to share a thought');
+    } else if (posts.length === 1) {
+      setFooterCountMessage('1 thought floats in the night');
+    } else {
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      const finalMessage = randomMessage.replace('thoughts', `${posts.length} thoughts`).replace('whispers', `${posts.length} whispers`).replace('musings', `${posts.length} musings`).replace('reflections', `${posts.length} reflections`);
+      setFooterCountMessage(finalMessage);
+    }
   }, [posts.length]);
 
   // Secret password detection
@@ -352,23 +376,7 @@ function App() {
                 transform: 'translateY(10px)'
               }}
             >
-              {(() => {
-                const messages = [
-                  'thoughts drift through the darkness',
-                  'whispers echo in the void',
-                  'midnight musings shared',
-                  'sleepless thoughts recorded',
-                  'thoughts left in the dark',
-                  'nocturnal reflections',
-                  'thoughts whispered to the night'
-                ];
-                
-                if (posts.length === 0) return 'be the first to share a thought';
-                if (posts.length === 1) return '1 thought floats in the night';
-                
-                const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-                return randomMessage.replace('thoughts', `${posts.length} thoughts`).replace('whispers', `${posts.length} whispers`).replace('musings', `${posts.length} musings`).replace('reflections', `${posts.length} reflections`);
-              })()}
+              {footerCountMessage}
             </p>
           </div>
         </div>
