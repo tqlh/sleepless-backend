@@ -121,7 +121,7 @@ export const moderateContent = (content: string): boolean => {
     }
   }
   
-  // Block slurs and hate speech
+  // Block slurs and hate speech - KEEPING THIS
   const slurs = [
     'nigger', 'nigga', 'faggot', 'fag', 'retard', 'retarded', 'tranny', 'chink', 
     'gook', 'spic', 'wetback', 'kike', 'dyke', 'homo', 'queer'
@@ -133,16 +133,16 @@ export const moderateContent = (content: string): boolean => {
     }
   }
   
-  // Block excessive profanity (more than 3 instances)
-  const profanityWords = ['fuck', 'shit', 'damn', 'ass', 'bitch', 'cunt', 'piss'];
-  const profanityCount = profanityWords.reduce((count, word) => {
-    const matches = (lowerContent.match(new RegExp(word, 'g')) || []).length;
-    return count + matches;
-  }, 0);
-  
-  if (profanityCount > 3) {
-    return false;
-  }
+  // REMOVED PROFANITY FILTERING - users can now post with swear words
+  // const profanityWords = ['fuck', 'shit', 'damn', 'ass', 'bitch', 'cunt', 'piss'];
+  // const profanityCount = profanityWords.reduce((count, word) => {
+  //   const matches = (lowerContent.match(new RegExp(word, 'g')) || []).length;
+  //   return count + matches;
+  // }, 0);
+  // 
+  // if (profanityCount > 3) {
+  //   return false;
+  // }
   
   // Block spam patterns
   const spamPatterns = [
