@@ -85,77 +85,93 @@ export const detectLanguage = (text: string): string => {
 };
 
 export const moderateContent = (content: string): boolean => {
-  // Basic content moderation - block obvious spam and harmful content
+  // Always allow content - we'll show support instead of blocking
+  return true;
+};
+
+// New function to detect if content needs support - only critical patterns
+export const needsSupport = (content: string): boolean => {
   const lowerContent = content.toLowerCase();
   
-  // Block empty or very short content
-  if (content.trim().length < 3) {
-    return false;
-  }
-  
-  // Block self-harm and suicide content
-  const selfHarmPatterns = [
-    /\b(kill myself|end my life|want to die|suicide|self harm|cut myself|hurt myself|gonna die|wanna die)\b/i,
-    /\b(not worth living|better off dead|end it all|take my own life|going to die|planning to die)\b/i,
-    /\b(i'll die|i will die|time to die|ready to die|done with life|can't go on)\b/i,
+  // Check for key phrases that indicate support is needed
+  const supportPhrases = [
+    'kill myself', 'end my life', 'want to die', 'suicide', 'self harm', 
+    'cut myself', 'hurt myself', 'not worth living', 'better off dead', 
+    'end it all', 'take my own life', 'planning to die', 'going to kill myself', 
+    'gonna kill myself', "don't want to live", "can't go on", 'done with life', 
+    'tired of living', 'wanna kill myself', 'wanna die', 'gonna die'
   ];
   
-  for (const pattern of selfHarmPatterns) {
-    if (pattern.test(content)) {
-      return false;
-    }
+  return supportPhrases.some(phrase => lowerContent.includes(phrase));
+};
+
+// Get a supportive message based on the content with multiple variations - more neutral/universal
+export const getSupportMessage = (content: string): string => {
+  const lowerContent = content.toLowerCase();
+  
+  if (lowerContent.includes('kill myself') || lowerContent.includes('suicide') || lowerContent.includes('end my life')) {
+    const messages = [
+      "If you're having thoughts of ending your life, please consider reaching out to someone who can help.",
+      "These feelings are serious and deserve attention. Consider talking to a professional or crisis line.",
+      "You don't have to face these thoughts alone. Help is available and people want to support you.",
+      "This is a sign you need support. Please reach out to someone who can help you through this.",
+      "These thoughts are treatable. Consider reaching out for professional help."
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
   }
   
-  // Block violence and threats
-  const violencePatterns = [
-    /\b(shoot|kill|murder|bomb|attack|stab|hurt|harm).*(school|people|everyone|them|you|kids|children)\b/i,
-    /\b(school shooter|mass shooting|going to kill|plan to kill|gonna kill|will kill)\b/i,
-    /\b(bring a gun|get a gun|use a gun|with a gun).*(school|work|public)\b/i,
-    /\b(shoot up|blow up|attack).*(school|workplace|building|place)\b/i,
-    /\b(they deserve to die|everyone should die|kill them all|murder spree)\b/i,
+  if (lowerContent.includes('self harm') || lowerContent.includes('cut myself') || lowerContent.includes('hurt myself')) {
+    const messages = [
+      "If you're considering self-harm, please reach out for support. You deserve care and help.",
+      "These urges are treatable. Consider talking to someone who can help you find healthier ways to cope.",
+      "You don't have to face this alone. Professional help can provide better coping strategies.",
+      "This is a sign you need support. Please reach out to someone who can help.",
+      "There are people who want to help you find healthier ways to deal with pain."
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+  
+  if (lowerContent.includes('not worth living') || lowerContent.includes('better off dead') || lowerContent.includes('end it all')) {
+    const messages = [
+      "If you're feeling this way, please consider reaching out for support. You matter.",
+      "These feelings are serious and deserve attention. Help is available.",
+      "You don't have to feel this way forever. Consider talking to someone who can help.",
+      "This is a sign you need support. Please reach out to someone who cares.",
+      "You deserve to feel better. Consider reaching out for professional help."
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+  
+  if (lowerContent.includes('planning to die') || lowerContent.includes('going to kill myself') || lowerContent.includes('gonna kill myself')) {
+    const messages = [
+      "If you're making plans to end your life, please reach out immediately. Help is available.",
+      "This is a crisis that requires immediate attention. Please call a crisis line or seek help.",
+      "You don't have to act on these thoughts. Help is available right now.",
+      "This is serious and you deserve immediate support. Please reach out for help.",
+      "Your life matters. Please reach out for help before acting on these thoughts."
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+  
+  if (lowerContent.includes("don't want to live") || lowerContent.includes("can't go on") || lowerContent.includes("done with life")) {
+    const messages = [
+      "If you're feeling this way, please consider reaching out for support. You don't have to be alone.",
+      "These feelings are treatable. Consider talking to someone who can help.",
+      "You deserve to feel better. Help is available and people want to support you.",
+      "This is a sign you need support. Please reach out to someone who can help.",
+      "You don't have to feel this way forever. Consider reaching out for professional help."
+    ];
+    return messages[Math.floor(Math.random() * messages.length)];
+  }
+  
+  // Default supportive message for any other critical patterns
+  const defaultMessages = [
+    "If you're struggling, please consider reaching out for support. You don't have to be alone.",
+    "These feelings deserve attention. Consider talking to someone who can help.",
+    "You deserve support. Please reach out to someone who can help you through this.",
+    "This is a sign you need help. Please consider reaching out for support.",
+    "You don't have to face this alone. Help is available and people care."
   ];
   
-  for (const pattern of violencePatterns) {
-    if (pattern.test(content)) {
-      return false;
-    }
-  }
-  
-  // Block slurs and hate speech - KEEPING THIS
-  const slurs = [
-    'nigger', 'nigga', 'faggot', 'fag', 'retard', 'retarded', 'tranny', 'chink', 
-    'gook', 'spic', 'wetback', 'kike', 'dyke', 'homo', 'queer'
-  ];
-  
-  for (const slur of slurs) {
-    if (lowerContent.includes(slur)) {
-      return false;
-    }
-  }
-  
-  // REMOVED PROFANITY FILTERING - users can now post with swear words
-  // const profanityWords = ['fuck', 'shit', 'damn', 'ass', 'bitch', 'cunt', 'piss'];
-  // const profanityCount = profanityWords.reduce((count, word) => {
-  //   const matches = (lowerContent.match(new RegExp(word, 'g')) || []).length;
-  //   return count + matches;
-  // }, 0);
-  // 
-  // if (profanityCount > 3) {
-  //   return false;
-  // }
-  
-  // Block spam patterns
-  const spamPatterns = [
-    /(.)\1{10,}/, // Repeated characters (11+ times)
-    /^[A-Z\s!]{20,}$/, // All caps with excessive length
-    /(buy now|click here|free money|make money fast)/i,
-  ];
-  
-  for (const pattern of spamPatterns) {
-    if (pattern.test(content)) {
-      return false;
-    }
-  }
-  
-  return true;
+  return defaultMessages[Math.floor(Math.random() * messages.length)];
 };
