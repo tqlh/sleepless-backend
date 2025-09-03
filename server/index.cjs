@@ -34,6 +34,20 @@ db.run(`
   }
 });
 
+// Daily limit reset function - resets at 11:59 PM
+const getLocalDate = () => {
+  const now = new Date();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  
+  // RESET: if it's 11:59 PM or later, advance to next day
+  if (hour === 23 && minute >= 59) {
+    now.setDate(now.getDate() + 1);
+  }
+  
+  return now.toISOString().split('T')[0];
+};
+
 // Get all posts
 app.get('/api/posts', (req, res) => {
   db.all(`
@@ -60,14 +74,14 @@ app.get('/api/posts', (req, res) => {
 
 // Create new post
 app.post('/api/posts', (req, res) => {
-  const { content, language = 'en', userFingerprint, userTimezone } = req.body;
+  const { content, language = 'en', userFingerprint } = req.body;
   
   if (!content) {
     return res.status(400).json({ error: 'Content is required' });
   }
   
-  // Check daily limit FIRST - use user's timezone
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone || 'UTC' });
+  // Check daily limit FIRST - use local device 11:59 PM reset
+  const today = getLocalDate();
   
   db.get(
     "SELECT count FROM daily_counts WHERE fingerprint = ? AND date = ?",
@@ -166,10 +180,9 @@ app.delete('/api/posts/:id', (req, res) => {
 // Get daily post count
 app.get('/api/daily-count/:fingerprint', (req, res) => {
   const { fingerprint } = req.params;
-  const { timezone } = req.query;
   
-  // Use user's timezone
-  const today = new Date().toLocaleDateString('en-CA', { timeZone: timezone || 'UTC' });
+  // Use local device 11:59 PM reset
+  const today = getLocalDate();
   
   // Get daily count for this fingerprint
   db.get(
