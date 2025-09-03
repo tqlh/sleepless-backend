@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bookmark, Check, Trash2 } from 'lucide-react';
 import { PostData } from '../types/Post';
 import TypewriterText from './TypewriterText';
+import { needsSupport, getSupportMessage } from '../utils/postManager';
 
 interface PostViewerProps {
   posts: PostData[];
@@ -27,6 +28,9 @@ const PostViewer: React.FC<PostViewerProps> = ({
   const [shuffledPosts, setShuffledPosts] = useState<PostData[]>([]);
   const [firstPostSeen, setFirstPostSeen] = useState(false);
   const [firstPostId, setFirstPostId] = useState<string | null>(null);
+  
+  // Track recently seen posts with timestamps
+  const [recentlySeen, setRecentlySeen] = useState<Map<string, number>>(new Map());
 
   // Memoize shuffled posts to prevent unnecessary re-shuffling
   const memoizedShuffledPosts = useMemo(() => {
@@ -69,12 +73,52 @@ const PostViewer: React.FC<PostViewerProps> = ({
     }
   }, [currentPost, firstPostId]);
 
+  // Get weighted random index (recently seen posts have lower chance)
+  const getWeightedRandomIndex = useCallback((excludeCurrent: boolean = false) => {
+    if (shuffledPosts.length === 0) return 0;
+    
+    const now = Date.now();
+    const recentThreshold = 5 * 60 * 1000; // 5 minutes
+    
+    // Calculate weights for each post
+    const weights = shuffledPosts.map((post, index) => {
+      if (excludeCurrent && index === currentIndex) return 0; // Exclude current if needed
+      
+      const lastSeen = recentlySeen.get(post.id) || 0;
+      const timeSinceSeen = now - lastSeen;
+      
+      // Recently seen posts get lower weight
+      if (timeSinceSeen < recentThreshold) {
+        return 0.1; // Very low chance
+      } else if (timeSinceSeen < recentThreshold * 2) {
+        return 0.5; // Low chance
+      } else {
+        return 1.0; // Normal chance
+      }
+    });
+    
+    // Calculate total weight
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    
+    // Generate random value
+    let random = Math.random() * totalWeight;
+    
+    // Find index based on weight
+    for (let i = 0; i < weights.length; i++) {
+      random -= weights[i];
+      if (random <= 0) return i;
+    }
+    
+    // Fallback to random if something goes wrong
+    return Math.floor(Math.random() * shuffledPosts.length);
+  }, [shuffledPosts, currentIndex, recentlySeen]);
+
   const nextPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Random jump to any post
-      const randomIndex = Math.floor(Math.random() * shuffledPosts.length);
+      // Use weighted random instead of pure random
+      const randomIndex = getWeightedRandomIndex();
       
       setTimeout(() => {
         setCurrentIndex(randomIndex);
@@ -84,19 +128,22 @@ const PostViewer: React.FC<PostViewerProps> = ({
         if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
           setFirstPostSeen(true);
         }
+        
+        // Mark this post as recently seen
+        const postId = shuffledPosts[randomIndex]?.id;
+        if (postId) {
+          setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
+        }
       }, 150);
     }
-  }, [shuffledPosts.length, isTransitioning, firstPostId]);
+  }, [shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
 
   const previousPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Random jump to any post (different from next)
-      let randomIndex;
-      do {
-        randomIndex = Math.floor(Math.random() * shuffledPosts.length);
-      } while (randomIndex === currentIndex && shuffledPosts.length > 1);
+      // Use weighted random, excluding current post
+      const randomIndex = getWeightedRandomIndex(true);
       
       setTimeout(() => {
         setCurrentIndex(randomIndex);
@@ -106,9 +153,15 @@ const PostViewer: React.FC<PostViewerProps> = ({
         if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
           setFirstPostSeen(true);
         }
+        
+        // Mark this post as recently seen
+        const postId = shuffledPosts[randomIndex]?.id;
+        if (postId) {
+          setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
+        }
       }, 150);
     }
-  }, [currentIndex, shuffledPosts.length, isTransitioning, firstPostId]);
+  }, [currentIndex, shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
 
   // Keyboard navigation with memoized handlers
   useEffect(() => {
@@ -194,6 +247,12 @@ const PostViewer: React.FC<PostViewerProps> = ({
       previousPost();
     }
   };
+
+  // Memoize support message for current post
+  const supportMessage = useMemo(() => {
+    if (!currentPost || !needsSupport(currentPost.content)) return null;
+    return getSupportMessage(currentPost.content);
+  }, [currentPost?.id]);
 
   if (shuffledPosts.length === 0 || !currentPost) {
     return (
@@ -281,7 +340,9 @@ const PostViewer: React.FC<PostViewerProps> = ({
             <div className="mb-4">
               <blockquote className="text-amber-50 leading-relaxed text-lg relative font-serif font-light">
                 <div className="absolute -left-2 -top-1 text-2xl text-amber-200/30 font-serif">"</div>
-                <p className="pl-4 pr-3">
+                <p className={`pl-4 pr-3 transition-opacity duration-150 ${
+                  isTransitioning ? 'opacity-40' : 'opacity-100'
+                }`}>
                   {currentPost?.id === firstPostId && !firstPostSeen ? (
                     <TypewriterText 
                       key={currentPost.id}
@@ -294,6 +355,17 @@ const PostViewer: React.FC<PostViewerProps> = ({
                 </p>
                 <div className="absolute -right-1 -bottom-2 text-2xl text-amber-200/30 font-serif">"</div>
               </blockquote>
+              
+              {/* Support Message - only appears when needed */}
+              {supportMessage && (
+                <div className={`mt-4 p-3 rounded-lg bg-amber-200/10 border border-amber-200/20 transition-opacity duration-150 ${
+                  isTransitioning ? 'opacity-0' : 'opacity-100'
+                }`}>
+                  <p className="text-amber-200/80 text-xs">
+                    {supportMessage}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -315,7 +387,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
         <button
           onClick={nextPost}
           disabled={shuffledPosts.length === 0}
-          className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
+          className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
         >
           <span className="text-xs font-light tracking-wide">Next</span>
           <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
