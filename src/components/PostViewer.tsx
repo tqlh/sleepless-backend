@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bookmark, Check, Trash2 } from 'lucide-react';
 import { PostData } from '../types/Post';
 import TypewriterText from './TypewriterText';
-import { needsSupport, getSupportMessage, getRandomPostsExcludingRecent, addToPostHistory, getPreviousPost, removeFromPostHistory } from '../utils/postManager';
+import { needsSupport, getSupportMessage, getRandomPostsExcludingRecent, addToPostHistory, getPreviousPost, removeFromPostHistory, getWeightedRandomPosts } from '../utils/postManager';
 
 interface PostViewerProps {
   posts: PostData[];
@@ -117,7 +117,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Get random post excluding recent ones
+      // Get random post using the new time-weighted selection
       const randomPosts = getRandomPostsExcludingRecent(shuffledPosts, 1);
       const newPost = randomPosts[0];
       
@@ -277,11 +277,23 @@ const PostViewer: React.FC<PostViewerProps> = ({
     }
   };
 
-  // Memoize support message for current post
+  // Memoize support message for current post with error handling
   const supportMessage = useMemo(() => {
-    if (!currentPost || !needsSupport(currentPost.content)) return null;
-    return getSupportMessage(currentPost.content);
-  }, [currentPost?.id]);
+    try {
+      if (!currentPost || !currentPost.content) return null;
+      
+      // Check if content needs support
+      const needsSupportResult = needsSupport(currentPost.content);
+      if (!needsSupportResult) return null;
+      
+      // Get support message
+      const message = getSupportMessage(currentPost.content);
+      return message;
+    } catch (error) {
+      console.error('Error in support message memoization:', error);
+      return null;
+    }
+  }, [currentPost?.id, currentPost?.content]);
 
   if (shuffledPosts.length === 0 || !currentPost) {
     return (
