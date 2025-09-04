@@ -5,6 +5,8 @@ const DAILY_POST_LIMIT = 5;
 const POSTS_STORAGE_KEY = 'sleepless_posts';
 const DAILY_COUNT_KEY = 'sleepless_daily_count';
 const LAST_POST_DATE_KEY = 'sleepless_last_post_date';
+const RECENTLY_SHOWN_KEY = 'sleepless_recently_shown';
+const MAX_RECENT_TRACK = 10; // Track last 10 shown posts
 
 const cleanOldPosts = (posts: PostData[]): PostData[] => {
   const oneWeekAgo = new Date();
@@ -179,4 +181,42 @@ export const getSupportMessage = (content: string): string => {
   ];
   
   return defaultMessages[Math.floor(Math.random() * messages.length)];
+};
+
+// Better shuffle function using Fisher-Yates algorithm
+const shuffleArray = <T>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+export const getRecentlyShownPosts = (): string[] => {
+  try {
+    const stored = localStorage.getItem(RECENTLY_SHOWN_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addToRecentlyShown = (postId: string): void => {
+  const recent = getRecentlyShownPosts();
+  const updated = [postId, ...recent].slice(0, MAX_RECENT_TRACK);
+  localStorage.setItem(RECENTLY_SHOWN_KEY, JSON.stringify(updated));
+};
+
+export const getRandomPostsExcludingRecent = (posts: PostData[], count: number): PostData[] => {
+  const recentlyShown = getRecentlyShownPosts();
+  const availablePosts = posts.filter(post => !recentlyShown.includes(post.id));
+  
+  // If we don't have enough posts, reset the recent list
+  if (availablePosts.length < count) {
+    localStorage.removeItem(RECENTLY_SHOWN_KEY);
+    return shuffleArray(posts).slice(0, count);
+  }
+  
+  return shuffleArray(availablePosts).slice(0, count);
 };
