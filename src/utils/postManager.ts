@@ -182,7 +182,7 @@ export const getSupportMessage = (content: string): string => {
     "You don't have to face this alone. Help is available and people care."
   ];
   
-  return defaultMessages[Math.floor(Math.random() * messages.length)];
+  return defaultMessages[Math.floor(Math.random() * defaultMessages.length)];
 };
 
 // Better shuffle function using Fisher-Yates algorithm
@@ -217,10 +217,16 @@ export const getRandomPostsExcludingRecent = (posts: PostData[], count: number):
   // If we don't have enough posts, reset the recent list
   if (availablePosts.length < count) {
     localStorage.removeItem(RECENTLY_SHOWN_KEY);
-    return shuffleArray(posts).slice(0, count);
+    return getWeightedRandomPosts(posts, count);
   }
   
-  return shuffleArray(availablePosts).slice(0, count);
+  return getWeightedRandomPosts(availablePosts, count);
+};
+
+// Simple random selection with duplicate prevention
+export const getWeightedRandomPosts = (posts: PostData[], count: number): PostData[] => {
+  const shuffled = [...posts].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
 };
 
 // Post history functions for back navigation
