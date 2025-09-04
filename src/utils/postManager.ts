@@ -93,9 +93,14 @@ export const moderateContent = (content: string): boolean => {
 export const needsSupport = (content: string): boolean => {
   const lowerContent = content.toLowerCase();
   
-  // Check for key phrases that indicate support is needed
+  // Check for suicide-related words first (including suicidal, suicide, etc.)
+  if (lowerContent.includes('suicide') || lowerContent.includes('suicidal')) {
+    return true;
+  }
+  
+  // Check for other key phrases that indicate support is needed
   const supportPhrases = [
-    'kill myself', 'end my life', 'want to die', 'suicide', 'self harm', 
+    'kill myself', 'end my life', 'want to die', 'self harm', 
     'cut myself', 'hurt myself', 'not worth living', 'better off dead', 
     'end it all', 'take my own life', 'planning to die', 'going to kill myself', 
     'gonna kill myself', "don't want to live", "can't go on", 'done with life', 
