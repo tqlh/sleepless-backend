@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bookmark, Check, Trash2 } from 'lucide-react';
 import { PostData } from '../types/Post';
 import TypewriterText from './TypewriterText';
-import { needsSupport, getSupportMessage, getRandomPostsExcludingRecent, addToPostHistory, getPreviousPost, removeFromPostHistory, getWeightedRandomPosts } from '../utils/postManager';
+import { needsSupport, getSupportMessage, getRandomPostsExcludingRecent, addToPostHistory, getPreviousPost, removeFromPostHistory, addToRecentlyShown } from '../utils/postManager';
 
 interface PostViewerProps {
   posts: PostData[];
@@ -23,41 +23,19 @@ const PostViewer: React.FC<PostViewerProps> = ({
   isAdmin = false,
   onDeletePost
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentPost, setCurrentPost] = useState<PostData | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [shuffledPosts, setShuffledPosts] = useState<PostData[]>([]);
   const [firstPostSeen, setFirstPostSeen] = useState(false);
   const [firstPostId, setFirstPostId] = useState<string | null>(null);
-  
-  // Track recently seen posts with timestamps
-  const [recentlySeen, setRecentlySeen] = useState<Map<string, number>>(new Map());
 
-  // Memoize shuffled posts to prevent unnecessary re-shuffling
-  const memoizedShuffledPosts = useMemo(() => {
-    if (posts.length === 0) return [];
-    return [...posts].sort(() => Math.random() - 0.5);
-  }, [posts]);
-
-  // Update shuffled posts and handle index changes
+  // Initialize with first post
   useEffect(() => {
-    setShuffledPosts(memoizedShuffledPosts);
-    
-    if (!showBookmarksOnly && lastViewedPostId && memoizedShuffledPosts.length > 0) {
-      const lastViewedIndex = memoizedShuffledPosts.findIndex(post => post.id === lastViewedPostId);
-      setCurrentIndex(lastViewedIndex >= 0 ? lastViewedIndex : 0);
-    } else {
-      setCurrentIndex(0);
+    if (posts.length > 0 && !currentPost) {
+      const firstPost = posts[0];
+      setCurrentPost(firstPost);
+      setFirstPostId(firstPost.id);
     }
-  }, [memoizedShuffledPosts, showBookmarksOnly, lastViewedPostId]);
-
-  // Reset currentIndex when posts array changes
-  useEffect(() => {
-    if (shuffledPosts.length > 0 && currentIndex >= shuffledPosts.length) {
-      setCurrentIndex(0);
-    }
-  }, [shuffledPosts, currentIndex]);
-
-  const currentPost = shuffledPosts[currentIndex];
+  }, [posts, currentPost]);
 
   // Notify parent of current post changes
   useEffect(() => {
@@ -66,59 +44,12 @@ const PostViewer: React.FC<PostViewerProps> = ({
     }
   }, [currentPost, onCurrentPostChange]);
 
-  // Track the first post that appears
-  useEffect(() => {
-    if (currentPost && !firstPostId) {
-      setFirstPostId(currentPost.id);
-    }
-  }, [currentPost, firstPostId]);
-
-  // Get weighted random index (recently seen posts have lower chance)
-  const getWeightedRandomIndex = useCallback((excludeCurrent: boolean = false) => {
-    if (shuffledPosts.length === 0) return 0;
-    
-    const now = Date.now();
-    const recentThreshold = 5 * 60 * 1000; // 5 minutes
-    
-    // Calculate weights for each post
-    const weights = shuffledPosts.map((post, index) => {
-      if (excludeCurrent && index === currentIndex) return 0; // Exclude current if needed
-      
-      const lastSeen = recentlySeen.get(post.id) || 0;
-      const timeSinceSeen = now - lastSeen;
-      
-      // Recently seen posts get lower weight
-      if (timeSinceSeen < recentThreshold) {
-        return 0.1; // Very low chance
-      } else if (timeSinceSeen < recentThreshold * 2) {
-        return 0.5; // Low chance
-      } else {
-        return 1.0; // Normal chance
-      }
-    });
-    
-    // Calculate total weight
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    
-    // Generate random value
-    let random = Math.random() * totalWeight;
-    
-    // Find index based on weight
-    for (let i = 0; i < weights.length; i++) {
-      random -= weights[i];
-      if (random <= 0) return i;
-    }
-    
-    // Fallback to random if something goes wrong
-    return Math.floor(Math.random() * shuffledPosts.length);
-  }, [shuffledPosts, currentIndex, recentlySeen]);
-
   const nextPost = useCallback(() => {
-    if (shuffledPosts.length > 0 && !isTransitioning) {
+    if (posts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Get random post using the new time-weighted selection
-      const randomPosts = getRandomPostsExcludingRecent(shuffledPosts, 1);
+      // Get random post excluding recent ones
+      const randomPosts = getRandomPostsExcludingRecent(posts, 1);
       const newPost = randomPosts[0];
       
       if (newPost) {
@@ -127,75 +58,66 @@ const PostViewer: React.FC<PostViewerProps> = ({
           addToPostHistory(currentPost.id);
         }
         
-        // Find the index of the new post
-        const newIndex = shuffledPosts.findIndex(post => post.id === newPost.id);
+        // Mark this post as recently seen
+        addToRecentlyShown(newPost.id);
         
         setTimeout(() => {
-          setCurrentIndex(newIndex);
+          setCurrentPost(newPost);
           setIsTransitioning(false);
           
           // Mark that we've seen the first post after navigating
           if (firstPostId && newPost.id !== firstPostId) {
             setFirstPostSeen(true);
           }
-          
-          // Mark this post as recently seen
-          setRecentlySeen(prev => new Map(prev).set(newPost.id, Date.now()));
         }, 150);
       }
     }
-  }, [shuffledPosts, isTransitioning, firstPostId, currentPost]);
+  }, [posts, isTransitioning, firstPostId, currentPost]);
 
   const previousPost = useCallback(() => {
-    if (shuffledPosts.length > 0 && !isTransitioning) {
+    if (posts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
       // Get previous post from history
-      const previousPost = getPreviousPost(shuffledPosts);
+      const previousPost = getPreviousPost(posts);
       
       if (previousPost) {
         // Remove current post from history
         removeFromPostHistory();
         
-        // Find the index of the previous post
-        const prevIndex = shuffledPosts.findIndex(post => post.id === previousPost.id);
-        
         setTimeout(() => {
-          setCurrentIndex(prevIndex);
+          setCurrentPost(previousPost);
           setIsTransitioning(false);
           
           // Mark that we've seen the first post after navigating
           if (firstPostId && previousPost.id !== firstPostId) {
             setFirstPostSeen(true);
           }
-          
-          // Mark this post as recently seen
-          setRecentlySeen(prev => new Map(prev).set(previousPost.id, Date.now()));
         }, 150);
       } else {
-        // No history available, just use weighted random
-        const randomIndex = getWeightedRandomIndex(true);
-        setTimeout(() => {
-          setCurrentIndex(randomIndex);
-          setIsTransitioning(false);
+        // No history available, just get a random post
+        const randomPosts = getRandomPostsExcludingRecent(posts, 1);
+        const randomPost = randomPosts[0];
+        
+        if (randomPost) {
+          addToRecentlyShown(randomPost.id);
           
-          if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
-            setFirstPostSeen(true);
-          }
-          
-          const postId = shuffledPosts[randomIndex]?.id;
-          if (postId) {
-            setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
-          }
-        }, 150);
+          setTimeout(() => {
+            setCurrentPost(randomPost);
+            setIsTransitioning(false);
+            
+            if (firstPostId && randomPost.id !== firstPostId) {
+              setFirstPostSeen(true);
+            }
+          }, 150);
+        }
       }
     }
-  }, [shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
+  }, [posts, isTransitioning, firstPostId]);
 
-  // Keyboard navigation with memoized handlers
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't interfere with text input - only handle navigation when no input is focused
       const activeElement = document.activeElement;
       if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
         return;
@@ -282,11 +204,9 @@ const PostViewer: React.FC<PostViewerProps> = ({
     try {
       if (!currentPost || !currentPost.content) return null;
       
-      // Check if content needs support
       const needsSupportResult = needsSupport(currentPost.content);
       if (!needsSupportResult) return null;
       
-      // Get support message
       const message = getSupportMessage(currentPost.content);
       return message;
     } catch (error) {
@@ -295,7 +215,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
     }
   }, [currentPost?.id, currentPost?.content]);
 
-  if (shuffledPosts.length === 0 || !currentPost) {
+  if (posts.length === 0 || !currentPost) {
     return (
       <div className="text-center py-20">
         <div className="relative">
@@ -418,7 +338,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
       <div className="flex justify-between items-center px-2">
         <button
           onClick={previousPost}
-          disabled={shuffledPosts.length === 0}
+          disabled={posts.length === 0}
           className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
         >
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
@@ -427,7 +347,7 @@ const PostViewer: React.FC<PostViewerProps> = ({
         
         <button
           onClick={nextPost}
-          disabled={shuffledPosts.length === 0}
+          disabled={posts.length === 0}
           className="flex items-center space-x-2 px-4 py-2 text-neutral-500 hover:text-neutral-200 disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 hover:bg-neutral-800/30 rounded-lg group"
         >
           <span className="text-xs font-light tracking-wide">Next</span>
