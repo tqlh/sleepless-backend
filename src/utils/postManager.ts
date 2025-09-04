@@ -7,6 +7,8 @@ const DAILY_COUNT_KEY = 'sleepless_daily_count';
 const LAST_POST_DATE_KEY = 'sleepless_last_post_date';
 const RECENTLY_SHOWN_KEY = 'sleepless_recently_shown';
 const MAX_RECENT_TRACK = 10; // Track last 10 shown posts
+const POST_HISTORY_KEY = 'sleepless_post_history';
+const MAX_HISTORY_SIZE = 20; // Keep last 20 posts in history
 
 const cleanOldPosts = (posts: PostData[]): PostData[] => {
   const oneWeekAgo = new Date();
@@ -219,4 +221,39 @@ export const getRandomPostsExcludingRecent = (posts: PostData[], count: number):
   }
   
   return shuffleArray(availablePosts).slice(0, count);
+};
+
+// Post history functions for back navigation
+export const getPostHistory = (): string[] => {
+  try {
+    const stored = localStorage.getItem(POST_HISTORY_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const addToPostHistory = (postId: string): void => {
+  const history = getPostHistory();
+  // Remove if already exists (to avoid duplicates)
+  const filtered = history.filter(id => id !== postId);
+  // Add to front and limit size
+  const updated = [postId, ...filtered].slice(0, MAX_HISTORY_SIZE);
+  localStorage.setItem(POST_HISTORY_KEY, JSON.stringify(updated));
+};
+
+export const getPreviousPost = (posts: PostData[]): PostData | null => {
+  const history = getPostHistory();
+  if (history.length < 2) return null; // Need at least 2 posts in history
+  
+  const previousPostId = history[1]; // Second item is the previous post
+  return posts.find(post => post.id === previousPostId) || null;
+};
+
+export const removeFromPostHistory = (): void => {
+  const history = getPostHistory();
+  if (history.length > 0) {
+    const updated = history.slice(1); // Remove first item
+    localStorage.setItem(POST_HISTORY_KEY, JSON.stringify(updated));
+  }
 };
