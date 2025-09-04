@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Bookmark, Check, Trash2 } from 'lucide-react';
 import { PostData } from '../types/Post';
 import TypewriterText from './TypewriterText';
-import { needsSupport, getSupportMessage } from '../utils/postManager';
+import { needsSupport, getSupportMessage, getRandomPostsExcludingRecent, addToPostHistory, getPreviousPost, removeFromPostHistory } from '../utils/postManager';
 
 interface PostViewerProps {
   posts: PostData[];
@@ -117,51 +117,80 @@ const PostViewer: React.FC<PostViewerProps> = ({
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Use weighted random instead of pure random
-      const randomIndex = getWeightedRandomIndex();
+      // Get random post excluding recent ones
+      const randomPosts = getRandomPostsExcludingRecent(shuffledPosts, 1);
+      const newPost = randomPosts[0];
       
-      setTimeout(() => {
-        setCurrentIndex(randomIndex);
-        setIsTransitioning(false);
-        
-        // Mark that we've seen the first post after navigating
-        if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
-          setFirstPostSeen(true);
+      if (newPost) {
+        // Add current post to history before moving to next
+        if (currentPost) {
+          addToPostHistory(currentPost.id);
         }
         
-        // Mark this post as recently seen
-        const postId = shuffledPosts[randomIndex]?.id;
-        if (postId) {
-          setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
-        }
-      }, 150);
+        // Find the index of the new post
+        const newIndex = shuffledPosts.findIndex(post => post.id === newPost.id);
+        
+        setTimeout(() => {
+          setCurrentIndex(newIndex);
+          setIsTransitioning(false);
+          
+          // Mark that we've seen the first post after navigating
+          if (firstPostId && newPost.id !== firstPostId) {
+            setFirstPostSeen(true);
+          }
+          
+          // Mark this post as recently seen
+          setRecentlySeen(prev => new Map(prev).set(newPost.id, Date.now()));
+        }, 150);
+      }
     }
-  }, [shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
+  }, [shuffledPosts, isTransitioning, firstPostId, currentPost]);
 
   const previousPost = useCallback(() => {
     if (shuffledPosts.length > 0 && !isTransitioning) {
       setIsTransitioning(true);
       
-      // Use weighted random, excluding current post
-      const randomIndex = getWeightedRandomIndex(true);
+      // Get previous post from history
+      const previousPost = getPreviousPost(shuffledPosts);
       
-      setTimeout(() => {
-        setCurrentIndex(randomIndex);
-        setIsTransitioning(false);
+      if (previousPost) {
+        // Remove current post from history
+        removeFromPostHistory();
         
-        // Mark that we've seen the first post after navigating
-        if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
-          setFirstPostSeen(true);
-        }
+        // Find the index of the previous post
+        const prevIndex = shuffledPosts.findIndex(post => post.id === previousPost.id);
         
-        // Mark this post as recently seen
-        const postId = shuffledPosts[randomIndex]?.id;
-        if (postId) {
-          setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
-        }
-      }, 150);
+        setTimeout(() => {
+          setCurrentIndex(prevIndex);
+          setIsTransitioning(false);
+          
+          // Mark that we've seen the first post after navigating
+          if (firstPostId && previousPost.id !== firstPostId) {
+            setFirstPostSeen(true);
+          }
+          
+          // Mark this post as recently seen
+          setRecentlySeen(prev => new Map(prev).set(previousPost.id, Date.now()));
+        }, 150);
+      } else {
+        // No history available, just use weighted random
+        const randomIndex = getWeightedRandomIndex(true);
+        setTimeout(() => {
+          setCurrentIndex(randomIndex);
+          setIsTransitioning(false);
+          
+          if (firstPostId && shuffledPosts[randomIndex]?.id !== firstPostId) {
+            setFirstPostSeen(true);
+          }
+          
+          const postId = shuffledPosts[randomIndex]?.id;
+          if (postId) {
+            setRecentlySeen(prev => new Map(prev).set(postId, Date.now()));
+          }
+        }, 150);
+      }
     }
-  }, [currentIndex, shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
+  }, [shuffledPosts, isTransitioning, firstPostId, getWeightedRandomIndex]);
 
   // Keyboard navigation with memoized handlers
   useEffect(() => {
