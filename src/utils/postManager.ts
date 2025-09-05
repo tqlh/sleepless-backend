@@ -1,6 +1,5 @@
 import { PostData } from '../types/Post';
 
-const MAX_POSTS = 500;
 const DAILY_POST_LIMIT = 5;
 const POSTS_STORAGE_KEY = 'sleepless_posts';
 const DAILY_COUNT_KEY = 'sleepless_daily_count';
@@ -9,13 +8,6 @@ const RECENTLY_SHOWN_KEY = 'sleepless_recently_shown';
 const MAX_RECENT_TRACK = 10; // Track last 10 shown posts
 const POST_HISTORY_KEY = 'sleepless_post_history';
 const MAX_HISTORY_SIZE = 20; // Keep last 20 posts in history
-
-const cleanOldPosts = (posts: PostData[]): PostData[] => {
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  return posts.filter(post => post.timestamp > oneWeekAgo);
-};
 
 export const getStoredPosts = (): PostData[] => {
   try {
@@ -27,29 +19,17 @@ export const getStoredPosts = (): PostData[] => {
       timestamp: new Date(post.timestamp)
     })).sort((a: PostData, b: PostData) => b.timestamp.getTime() - a.timestamp.getTime());
     
-    // Clean old posts and update storage
-    const cleanedPosts = cleanOldPosts(parsedPosts);
-    if (cleanedPosts.length !== parsedPosts.length) {
-      localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(cleanedPosts));
-    }
-    
-    return cleanedPosts;
+    return parsedPosts;
   } catch {
     return [];
   }
 };
 
 export const storePost = (newPost: PostData, currentPosts: PostData[]): PostData[] => {
-  // Clean old posts first
-  const cleanedPosts = cleanOldPosts(currentPosts);
+  const updatedPosts = [newPost, ...currentPosts];
   
-  const updatedPosts = [newPost, ...cleanedPosts];
-  
-  // Maintain rolling buffer of MAX_POSTS
-  const trimmedPosts = updatedPosts.slice(0, MAX_POSTS);
-  
-  localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(trimmedPosts));
-  return trimmedPosts;
+  localStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(updatedPosts));
+  return updatedPosts;
 };
 
 export const getDailyPostCount = (): number => {
